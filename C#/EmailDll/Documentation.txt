@@ -1,0 +1,173 @@
+The dll can be found under bin/Debug/UISEmail.dll
+
+************UISEmail DLL Documentation************
+
+Importing and Using the DLL file
+
+To start off, download the DLL file and save it some where on your hard drive.  Then in your "Solution Explorer"
+in your project right-click on "Refernces" and select "Add Reference".  In the window the comes up select the "Browse" tab.
+Now browse to the DLL file and select and hit OK.  You should now have the DLL in the your "References" list.
+
+To use the DLL you simply need to have the correct using statement.  Then you can use the class that is provided.
+Here is a bare bones to get started:
+
+using UISEmail;
+
+namespace DllEmailTest
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Email email = new Email();
+        }
+    }
+}
+
+Note:  The namespace is UISEmail and the class name is Email.
+
+************Using the Email Class************
+
+There are several properties and a few constructors but only one method.  This is to simplify the process and to not allow
+certain features to be changed.  The only parts that are required to send a proper email is to have the From Address and 
+to have an address added to the To Addresses list.  Then when you have these set use the sendMail method to send it.  
+
+using UISEmail;
+
+namespace DllEmailTest
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Email email = new Email();
+            email.ToAddresses.Add("Email Address to Send To");
+            email.FromAddress = "Email Address this is From";
+            email.sendMail();
+        }
+    }
+}
+
+Of course this code will send a blank email with no body or subject but it's the bare minimum required to not get any 
+exceptions thrown.
+
+To add a subject you simply call the Subject property and assign it a string.  It might look something this:
+email.Subject = "Hello, world!";
+
+Adding a body is the same.  
+email.Body = "This is the body of my email";
+
+If you would like to send to multiple people you can do one of two things.  You can keep calling the ToAddresses.Add method
+or you can set the ToAddresses list to a list you created.  For example:
+
+//(Calling the Add method)
+using UISEmail;
+
+namespace DllEmailTest
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Email email = new Email();
+            email.ToAddresses.Add("Email Address to Send To");
+			email.ToAddresses.Add("Another email addres to send to.");
+			email.ToAddresses.Add("Yet another email");
+			//...etc...//
+            email.FromAddress = "Email Address this is From";
+			email.Subject = "Hello, world!";
+			email.Body = "This is the body of my email";
+            email.sendMail();
+        }
+    }
+}
+
+Or
+
+//(Creating your own list)
+using UISEmail;
+
+namespace DllEmailTest
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            List<string> emails = new List<string>();
+            emails.Add("An email to send to");
+			emails.Add("Another email to send to");
+			
+            Email email = new Email();
+            email.ToAddresses = emails;
+			
+            email.FromAddress = "Email Address this is From";
+			email.Subject = "Hello, world!";
+			email.Body = "This is the body of my email";
+            email.sendMail();
+        }
+    }
+}
+
+Note:  Alot of the other lists will be the same way so from here on out I'm only going to show the other lists
+using the Add method.  Also note that the FromAddress is NOT a list.  That's because you can't have 2 or more senders
+of a specific email.
+
+If you don't set the Sender property then when the recipient recieves the email it will simply display the senders email	
+address.  If you do set the Sender property then whatever you have set will be displayed along with your email address.
+You set the Sender property the same way you set the From Address, Subject, or Body.
+email.Sender = "Whatever you would like to be called";
+
+There are two properties that you can set but do not take strings.  They take ints instead.  Those properties are priority 
+and delivery method.  We'll start with priority.
+To set it simply assign it:
+email.Priority = 2;
+
+In this case a 2 is high priority.  The key is as follows:
+0 = Low Priority
+1 = Normal Priority (Default)
+2 = High Priority
+
+If the priority is set to anything that is not one of these then a new Argument Exception is thrown.
+
+The delivery method is set up the same way
+email.DeliveryMethod = 0;
+
+Here's the key:
+0 = Network (Default)
+1 = Pickup Directory From IIS
+2 = Specified Pickup Directory
+
+The isHtml can be either true or false.  This just sets the formatting for the email to include html or not.
+
+All that's left to talk about are the other lists (BccAddresses, AttachmentPaths, and CarbonCopies), the constructors,
+and the defaults that should not be changed in the application level.
+
+The other lists are exactly like the ToAddresses list only called their respective name.  Do note, though, that the
+AttachmentPaths must either be the full path of the file or in the same location in which the program is running.
+
+So that leaves us with the default values of which there is only 1, the SMTP Client.  This will always be set to localhost.
+You should be sure that the host in which you are running the program on has a smtp capabilities.
+
+******************CONSTRUCTORS******************
+
+There are only 3 constructors.  The first one is a general all purpose constructor that doesn't require anything.  Using this constructor requires
+you to supply the proper information for later.
+
+Email()
+
+The next constructor requires 3 parameters.  A from address in the form of a string, a sender in the form of a string, 
+and a to addresses list of strings.  You can leave the to addresses list null and add those in later. 
+When you set the list null your not removing the list entirely the constructor knows to create a new list.
+In other words, the list does not become a null location the constructor creates the proper object.  This is to allow the programmer to create
+a list and set it or have the library create the list object.
+
+Email(string fromAddress, string sender, List<string> toAddresses)
+
+The last constructor has 8 parameters.  In addition to the second constructor mentioned this one also accepts a string subject, a string body, 
+a list of attachment paths, a list of bcc addresses, and a list of carbon copy addresses.  All lists can be set to null and the constructor
+will create and object to use later.
+
+Email(string fromAddress, string sender, List<string> toAddresses,
+	  string subject, string body, List<string> attachmentPaths, List<string> bccAddresses, List<string> carbonCopies)
+	  
+	  

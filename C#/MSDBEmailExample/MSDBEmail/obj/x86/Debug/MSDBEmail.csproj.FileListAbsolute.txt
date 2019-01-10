@@ -1,0 +1,7 @@
+C:\Users\amall2\AppData\Local\Temporary Projects\MSDBEmail\bin\Debug\MSDBEmail.exe
+C:\Users\amall2\AppData\Local\Temporary Projects\MSDBEmail\bin\Debug\MSDBEmail.pdb
+C:\Users\amall2\AppData\Local\Temporary Projects\MSDBEmail\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\Users\amall2\AppData\Local\Temporary Projects\MSDBEmail\obj\x86\Debug\MSDBEmail.exe
+C:\Users\amall2\AppData\Local\Temporary Projects\MSDBEmail\obj\x86\Debug\MSDBEmail.pdb
+C:\Users\amall2\documents\visual studio 2010\Projects\MSDBEmail\MSDBEmail\obj\x86\Debug\MSDBEmail.exe
+C:\Users\amall2\documents\visual studio 2010\Projects\MSDBEmail\MSDBEmail\obj\x86\Debug\MSDBEmail.pdb

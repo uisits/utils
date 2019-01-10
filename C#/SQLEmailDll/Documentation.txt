@@ -1,0 +1,130 @@
+************UISSQLEmail DLL Documentation************
+
+Importing and Using the DLL file
+
+To start off, download the DLL file and save it some where on your hard drive.  Then in your "Solution Explorer"
+in your project right-click on "Refernces" and select "Add Reference".  In the window the comes up select the "Browse" tab.
+Now browse to the DLL file and select and hit OK.  You should now have the DLL in the your "References" list.
+
+To use the DLL you simply need to have the correct using statement.  Then you can use the class that is provided.
+Here is a bare bones to get started:
+
+using UISSQLEmail;
+
+namespace DllEmailTest
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            SQLEmail email = new SQLEmail();
+        }
+    }
+}
+
+Note:  The namespace is UISSQLEmail and the class name is SQLEmail.
+
+************Using the SQLEmail Class************
+The SQL email class is easy to use.  The only necessary parts required are the To and From addresses and a call to the 
+send email method.  A skeleton program looks like this:
+
+using UISSQLEmail;
+
+namespace DllEmailTest
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            SQLEmail email = new SQLEmail();
+			
+			email.ToEmailAddress = "test@test.com";
+			email.FromEmailAddress = "recipient@test.com";
+			
+			email.sendEmail(); //Passes variables to procedure uis_sendmail
+        }
+    }
+}
+
+If you want to send an email with a body and subject you simply call their respective accessors.
+
+using UISSQLEmail;
+
+namespace DllEmailTest
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            SQLEmail email = new SQLEmail();
+			
+			email.ToEmailAddress = "test@test.com";
+			email.FromEmailAddress = "recipient@test.com";
+			email.Subject = "Test";
+			email.Body = "This is a test";
+			email.sendEmail(); //Passes variables to procedure uis_sendmail and executes.
+        }
+    }
+}
+
+If you want to CC or BCC multiple people you pass in a string of emails separated by a semicolon.
+
+using UISSQLEmail;
+
+namespace DllEmailTest
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            SQLEmail email = new SQLEmail();
+			
+			email.ToEmailAddress = "test@test.com";
+			email.FromEmailAddress = "recipient@test.com";
+			email.Subject = "Test";
+			email.Body = "This is a test";
+			email.CC = "cc1@test.com;cc2@test.com";
+			email.BCC = "bcc1@test.com;bcc2@test.com";
+			email.sendEmail(); //Passes variables to procedure uis_sendmail and executes.
+        }
+    }
+}
+
+
+************Setting Variables************
+There are several variables that you can get and set by calling its accessors.  In the "Using the SQLEmail Class" the
+ToEmailAddress and FromEmailAddress are both accessors that allow you to get and set the toEmailAddress and fromEmailAddress variables
+in the UISSQLEmail class.  This is the only way to access the variables.  Below is a list of all the variable names, their types, and
+their defaults.
+
+        string profileName = "uisappdev";
+        string executeQueryDB = "";
+        Decimal groupID = 10;
+        string bodyFormat = "html";
+        string importance = "NORMAL";
+        string sensitivity = "NORMAL";
+        bool attachQueryResultAsFile = false;
+        bool queryResultHeader = true;
+        Int32 queryResultWidth = 256;
+        string queryResultSeparator = " ";
+        bool excludeQueryOutput = false;
+        bool appendQueryError = false;
+        bool queryNoTruncate = false;
+        bool queryResultNoPadding = false;
+        bool applicationError = false;
+        bool sendAutonomously = false;
+        string runType = "HELP";
+
+        string fileAttachment = ""; - Has been tested but failed.  Tries to pull file off the server machine and not the local machine that's running the DLL
+        string toEmailAddress = "";
+        string fromEmailAddress = "";
+        string subject = "";
+        string body = "";
+        string replyTo = "";
+        string cc = "";
+        string bcc = "";
+        string query = "";
+        string queryAttachmentFilename = "";
+
+        mailItemID has not been created because you can't set an int variable to null.  
+

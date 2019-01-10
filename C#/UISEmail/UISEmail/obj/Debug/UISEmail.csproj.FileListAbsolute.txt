@@ -1,0 +1,10 @@
+C:\Users\broge2\AppData\Local\Temporary Projects\UISEmail\bin\Debug\UISEmail.dll
+C:\Users\broge2\AppData\Local\Temporary Projects\UISEmail\bin\Debug\UISEmail.pdb
+C:\Users\broge2\AppData\Local\Temporary Projects\UISEmail\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\broge2\AppData\Local\Temporary Projects\UISEmail\obj\Debug\UISEmail.dll
+C:\Users\broge2\AppData\Local\Temporary Projects\UISEmail\obj\Debug\UISEmail.pdb
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\UISEmail\UISEmail\bin\Debug\UISEmail.dll
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\UISEmail\UISEmail\bin\Debug\UISEmail.pdb
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\UISEmail\UISEmail\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\UISEmail\UISEmail\obj\Debug\UISEmail.dll
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\UISEmail\UISEmail\obj\Debug\UISEmail.pdb

@@ -1,0 +1,10 @@
+C:\Users\broge2\AppData\Local\Temporary Projects\SQLEmail\bin\Debug\SQLEmail.dll
+C:\Users\broge2\AppData\Local\Temporary Projects\SQLEmail\bin\Debug\SQLEmail.pdb
+C:\Users\broge2\AppData\Local\Temporary Projects\SQLEmail\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\broge2\AppData\Local\Temporary Projects\SQLEmail\obj\Debug\SQLEmail.dll
+C:\Users\broge2\AppData\Local\Temporary Projects\SQLEmail\obj\Debug\SQLEmail.pdb
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\SQLEmail\SQLEmail\bin\Debug\SQLEmail.dll
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\SQLEmail\SQLEmail\bin\Debug\SQLEmail.pdb
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\SQLEmail\SQLEmail\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\SQLEmail\SQLEmail\obj\Debug\SQLEmail.dll
+C:\Users\broge2\Documents\Visual Studio 2010\Projects\SQLEmail\SQLEmail\obj\Debug\SQLEmail.pdb
