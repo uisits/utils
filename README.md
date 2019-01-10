@@ -10,3 +10,4 @@ Files in [utils ] are shared externally to the University – careful.
 Consider providing an additional README file in a functional subfolder to provide even more details (e.g. [README_utils_xxx] where 'xxx' is 'oracle').
 
 This repository was started Sept. 2017 with UIS' local GIT repository and ported to GitHub later (Ja. 2019).
+
