@@ -55,11 +55,14 @@ Usage:	For writing output of a session - and get around the per output size rest
 */
 CREATE OR REPLACE PACKAGE uis_utils.UIS_LOB  as
 
+    -- Retrieve source (text) from DBA_SOURCE - since each record is a line of code
+	FUNCTION  get_ddl_src(  obj_owner in VARCHAR2, obj_name in VARCHAR2 ) return CLOB ;
+
 	-- Use put_line() to chunk up a CLOB and print it out (issues at printing the 51st char)...
-	procedure  print_clob( clob_2_prt in CLOB ) ;
+	PROCEDURE  print_clob( clob_2_prt in CLOB ) ;
 
 	-- Write a CLOB passed in to a file (passed in)...
-    procedure write_clob2file( clob_2_wrt in CLOB,  fname in varchar2,  charset in varchar2  default 'AL32UTF8' );
+    PROCEDURE write_clob2file( clob_2_wrt in CLOB,  fname in varchar2,  charset in varchar2  default 'AL32UTF8' );
 
 END ;
 
@@ -68,7 +71,27 @@ grant execute on  uis_utils.uis_lob to public;
 
 CREATE OR REPLACE PACKAGE BODY uis_utils.UIS_LOB  as
 
-procedure print_clob( clob_2_prt in CLOB )
+FUNCTION  get_ddl_src(  obj_owner in VARCHAR2, obj_name in VARCHAR2 ) 
+return CLOB 
+is
+   ddl_def	CLOB := EMPTY_CLOB;
+   cursor rec_cursor  is  select  text  from   DBA_SOURCE  where owner = obj_owner  and name = obj_name  order by line;
+begin 
+   dbms_lob.createtemporary( ddl_def, TRUE);
+   dbms_lob.open( ddl_def, dbms_lob.lob_readwrite);
+
+   for rec in rec_cursor  loop
+      -- dbms_output.put_line( 'line --> ' || rec.text );
+      ddl_def := ddl_def || rec.text;
+   end loop;
+   
+   return ddl_def;
+   
+exception when others then 
+    return NULL;  
+end;
+
+PROCEDURE print_clob( clob_2_prt in CLOB )
 as
    l_offset 		number	default 1;
    chunk_threshold 	number	default 255;
@@ -118,7 +141,7 @@ end print_clob;
 
 -- REQUIRES: create or replace directory TMP_DIR as '/tmp';  -- Oracle uses upper case internally
 --
-procedure write_clob2file( clob_2_wrt in CLOB,  fname in varchar2,  charset in varchar2  default 'AL32UTF8' )
+PROCEDURE write_clob2file( clob_2_wrt in CLOB,  fname in varchar2,  charset in varchar2  default 'AL32UTF8' )
 as
    l_offset 	number	default 1;
    chunk_sz 	number	default 3600;  -- 32767;
