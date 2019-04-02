@@ -1,7 +1,7 @@
 /* 
-File:	CDM/misc_apps/alerts.pkb
+File:	uis_utils/oracle/alerts.pkb
  
-Desc:	Code supporting DB alert notices for security violations.
+Desc:	Code supporting DB alert notices (e.g., security violations).
 		
 NOTE:	Some schemas to remove when trying to identifty targeted set:
  
@@ -21,9 +21,6 @@ Enhancements:
 		
  */
  
-create table uis_utils.ALL_VALID_PRIVS as select * from uis_edw.ALL_VALID_PRIVS ;
-
-
 -- ==========================  JOBs =====================================================
 
 -- Run job:		exec DBMS_SCHEDULER.run_job('uis_utils.UTILS_RPT_VERIFY_PERMS');
@@ -35,7 +32,21 @@ BEGIN
       , start_date           => '11-FEB-19 6.31.00PM'
       , repeat_interval      => 'FREQ=DAILY' 
       , end_date             => NULL						-- '15-JAN-99 1.00.00AM US/Pacific',
-      , enabled =>  TRUE,  comments => 'CDM: alerts.VERIFY_PERMISSIONS'
+      , enabled =>  TRUE,  comments => 'UTILS: alerts.VERIFY_PERMISSIONS'
+   );
+END;
+
+
+-- Run job:		exec DBMS_SCHEDULER.run_job('uis_utils.UTILS_RPT_PWD_EXPIRING');
+-- Drop job:	exec DBMS_SCHEDULER.drop_job('uis_utils.UTILS_RPT_PWD_EXPIRING');
+BEGIN
+   DBMS_SCHEDULER.CREATE_JOB (
+      job_name => 'uis_utils.UTILS_RPT_PWD_EXPIRING', job_type => 'PLSQL_BLOCK'
+      , job_action		=> 'begin  uis_utils.alerts.RPT_EXPIRING_PASSWORDS;  end;'
+      , start_date           => '11-FEB-19 6.31.00AM'
+      , repeat_interval      => 'FREQ=DAILY; BYDAY=FRI' 
+      , end_date             => NULL						-- '15-JAN-99 1.00.00AM US/Pacific',
+      , enabled =>  TRUE,  comments => 'UTILS: alerts.RPT_EXPIRING_PASSWORDS'
    );
 END;
 
@@ -50,6 +61,7 @@ END;
 grant select on dba_tab_privs to uis_utils;
 grant select on role_tab_privs to uis_utils;
 grant select on dba_role_privs to uis_utils;
+grant select on dba_users to uis_utils;
 
 -- create table uis_utils.ALL_VALID_PRIVS
 --
@@ -63,7 +75,7 @@ select  distinct  dtp.grantee, dtp.owner, dtp.table_name, dtp.grantor, dtp.privi
    , dtp.type as obj_type, dtp.inherited, 'SCHEMA' as grant_type
 from  DBA_TAB_PRIVS  DTP 
 ;
-
+--
 alter table uis_utils.ALL_VALID_PRIVS  add created_dt DATE default sysdate;
 alter table uis_utils.ALL_VALID_PRIVS  add is_display varchar2( 1 ) default 'Y';
 
@@ -86,7 +98,7 @@ as
 	procedure validate_permissions;
 	
 	-- Report on password expirations...
-	procedure rpt_on_pwd_expirations;
+	procedure rpt_expiring_passwords;
 
 end alerts;
 --
@@ -97,8 +109,74 @@ end alerts;
 
 */
 set define off
+--
 create or replace package body  uis_utils.alerts
 as
+	-- =====================================================================================
+	-- Report on privileges granted that are new (to find illegal ones
+	--
+	procedure rpt_expiring_passwords
+	is
+		rec_cnt				number := 0;
+		msg_body			CLOB;
+		pwd_rows			CLOB;				
+		i_name				varchar2( 50 );
+	begin
+		
+		-- Define set of new objects with privileges granted on them
+		--		
+		declare
+			cursor pwd_cur  is
+			   select lower( du.username ) username, du.expiry_date, trunc (du.expiry_date) - trunc (sysdate) as days2expire 
+			   from DBA_USERS  DU 
+			   where  du.account_status IN ('OPEN', 'EXPIRED')  AND du.username NOT IN ('SYS', 'SYSTEM', 'DBSNMP')  
+			   and trunc (du.expiry_date) between trunc (sysdate)  and  ( trunc (sysdate) + 330 ) --  INTERVAL '300' DAY
+			   order by du.expiry_date, du.username;
+			a_rec	pwd_cur%rowtype;
+		begin
+			open pwd_cur;
+			loop	
+				fetch pwd_cur into a_rec;
+				exit when pwd_cur%NOTFOUND;
+				
+				-- Build html table row/record...
+				pwd_rows := pwd_rows ||'<tr><td>&nbsp;'|| a_rec.username ||'</td><td align=center>&nbsp;'|| a_rec.expiry_date ||'</td>'
+				   ||'<td align=center>&nbsp;'
+				   || a_rec.days2expire ||'</td></tr>';
+			end loop;
+		end;
+
+		select instance_name into i_name  from v$INSTANCE;
+		
+		-- Preface message and begin and end the table...
+		--
+		if ( pwd_rows is NULL )
+		then
+		   msg_body := '<p><br/>The are no DB accounts with passwords set for expiring on [ <b>'|| i_name ||'</b> ].</p>';	   
+		else
+		   msg_body := '<p>The following is an order list of users by password expiring time for the DB instance [ <b>'
+		   || i_name ||'</b> ].</p>'
+		   ||'<table cellpadding="2" cellspacing="2" border="1" >'
+		   ||'<tr><th colspan="3" align="center">Users with Passwords Expiring<br/><br/> </th></tr>'
+		   ||'<tr><th>User</th><th>Expiration Date</th><th>Days Remaining</th></tr>'
+		   || pwd_rows 
+		   ||'</table><p>Once the number of users grows to be "unmanageable", then consider a lookup table to derive the owner''s email address.</p>';		
+		end if;
+		
+		uis_utils.uis_sendmail.send_html( to_list => 'vhube3@uis.edu'
+		-- uis_utils.uis_sendmail.send_html( to_list => 'UISappDevDL@uis.edu'
+		   , subject => 'Alert - Password Expiration (for '|| i_name ||' on '|| to_char( sysdate, 'MM/DD/YYYY' ) ||')'
+		   , body_of_msg => msg_body, group_id => 1001
+		);
+		
+		EXCEPTION
+		when others then
+		   rollback;
+		   dbms_output.put_line( SQLERRM ||': '|| SQLERRM );
+		   	
+	end rpt_expiring_passwords;
+	
+	-- =====================================================================================
 	-- Report on privileges granted that are new (to find illegal ones
 	--
 	procedure verify_permissions
@@ -144,8 +222,8 @@ as
 		   ||'<tr><th>Privilege</th><th>Owner</th><th>Object</th><th>Grantee</th><th>Grantor</th></tr>'
 		   || new_privs ||'</table><p>If these entries are OK, you can remove them (bless them) by running [exec uis_utils.alerts.validate_permissions;].</p>';
 
-		uis_utils.uis_sendmail.send_html( to_list => 'vhube3@uis.edu', subject => 'CDM Alert for '||to_char( sysdate, 'MM/DD/YYYY' )
-			, body_of_msg => msg_body, group_id => 1001
+		uis_utils.uis_sendmail.send_html( to_list => 'vhube3@uis.edu'
+		   , subject => 'Alert - Permission Verification ('||to_char( sysdate, 'MM/DD/YYYY' ) ||')', body_of_msg => msg_body, group_id => 1001
 		);
 		
 		EXCEPTION
@@ -155,6 +233,7 @@ as
 		   	
 	end verify_permissions;
 	
+	-- =====================================================================================
 	-- Validate/approve privileges showing up in [verify_permissions]...
 	--
 	procedure validate_permissions 
