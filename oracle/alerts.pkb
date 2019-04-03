@@ -184,7 +184,7 @@ as
 		rec_cnt				number := 0;
 		msg_body			CLOB;
 		new_privs			CLOB;				
-		
+		i_name				varchar2( 50 );
 	begin
 
 		-- Remove entries no longer present in dictionary...
@@ -192,6 +192,8 @@ as
 		delete from ALL_VALID_PRIVS  where ( owner, table_name, grantee ) NOT IN (
 		   select owner, table_name, grantee  from cur_ALL_VALID_PRIVS
 		);
+		
+		select instance_name into i_name  from v$INSTANCE;
 		
 		-- Define set of new objects with privileges granted on them
 		--		
@@ -216,14 +218,23 @@ as
 
 		-- Preface message and begin and end the table...
 		--
-		msg_body := '<p>The following DB objects have had privileges granted to them that have not been blessed.</p>'
+		
+		if ( new_privs is NULL )
+		then
+		   msg_body := '<p><br/>The were no new privileges granted to report on for DB [ <b>'|| i_name ||'</b> ].</p>';	   
+		else
+		   msg_body := '<p>The following DB objects have had privileges granted to them that have not been blessed for DB instance [ <b>'
+		   || i_name ||'</b> ].</p>'
 		   ||'<table cellpadding="2" cellspacing="2" border="1" >'
 		   ||'<tr><th colspan="5" align="center">New Privileges Needing Verified <br/><br/> </th></tr>'
 		   ||'<tr><th>Privilege</th><th>Owner</th><th>Object</th><th>Grantee</th><th>Grantor</th></tr>'
 		   || new_privs ||'</table><p>If these entries are OK, you can remove them (bless them) by running [exec uis_utils.alerts.validate_permissions;].</p>';
+		   
+		end if;
 
 		uis_utils.uis_sendmail.send_html( to_list => 'vhube3@uis.edu'
-		   , subject => 'Alert - Permission Verification ('||to_char( sysdate, 'MM/DD/YYYY' ) ||')', body_of_msg => msg_body, group_id => 1001
+		   , subject => 'Alert - Permission Verification ('|| i_name ||':'|| to_char( sysdate, 'MM/DD/YYYY' ) ||')'
+		   , body_of_msg => msg_body, group_id => 1001
 		);
 		
 		EXCEPTION
