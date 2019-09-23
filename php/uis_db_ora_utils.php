@@ -99,7 +99,7 @@ function uis_db_ora_close_err( $db_conn, $err_msg ) {
 }   // end of uis_db_ora_close_err()
 
 // *************************************************************************
-function uis_db_ora_err_stmt( $db_conn, $stmt, $err_msg ) {
+function uis_db_ora_close_err_stmt( $db_conn, $stmt, $err_msg ) {
 
    echo var_dump( oci_error( $db_conn )  );
 
