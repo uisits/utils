@@ -61,7 +61,10 @@ $img_data = file_get_contents( "$IMG_FILENAME" );
 //
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');
-header("Access-Control-Allow-Headers: *");
+//header("Access-Control-Allow-Headers: *");
+// ...test change for IE - but did not work:
+header("Access-Control-Allow-Headers:Origin,x-csrf-token,X-Requested-With,Content-Type,Accept");
+header("X-Requested-With:'XMLHttpRequest'");
 header("Access-Control-Allow-Methods:'GET'");
 
 echo '{' . PHP_EOL 
