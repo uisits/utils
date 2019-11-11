@@ -139,7 +139,9 @@ insert into dbo.wdict_acronym ( acronym, short_name, acronym_desc )  values( 'CA
 --
 insert into dbo.wdict_acronym ( acronym, short_name, acronym_desc )  values( 'SWV', 'Sister''s With Vision'
    , 'To be completed.');
---
+-- ...added 11/11/2019
+insert into dbo.wdict_acronym ( acronym, short_name, acronym_desc, is_active )
+values( 'GIS', 'Geographical Information System', 'Acronym for a system framework for gathering, managing, and analyzing geographic data', 'Y');
 
 
 
