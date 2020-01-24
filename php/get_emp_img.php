@@ -11,8 +11,9 @@ Desc:  Return the Base64 image for an employee - based upon where
 
        ...json encoded:
 
+Install at:  WEBROOT/images/get_emp_img.php
 
-       Install at:  WEBROOT/images/get_emp_img.php
+Usage: https://uisgplprod1.uis.edu/images/get_emp_img.php?uin=660838482
  */
 
 // $uin = "660838482";
