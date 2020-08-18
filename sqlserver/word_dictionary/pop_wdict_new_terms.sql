@@ -143,6 +143,9 @@ insert into dbo.wdict_acronym ( acronym, short_name, acronym_desc )  values( 'SW
 insert into dbo.wdict_acronym ( acronym, short_name, acronym_desc, is_active )
 values( 'GIS', 'Geographical Information System', 'Acronym for a system framework for gathering, managing, and analyzing geographic data', 'Y');
 
+-- ...added 8/17/2020 per request from Sadie Furman
+insert into dbo.wdict_acronym ( acronym, short_name, acronym_desc, is_active ) values( 'iSPI', 'Innovate Springfield ', 'Acronym for the Innovate Springfield  initiative', 'Y');
+
 
 
 delete from dbo.wdict_general where word = 'asb';
