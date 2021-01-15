@@ -134,5 +134,69 @@ BEGIN
 END;
 --
 grant execute on uis_utils.get_sess_method  to public;
-    
+
+
+			
+-- IS_NUMBER: Check if string is numeric.
+-- ...returns {0} : if string is not numeric;
+-- ...returns {1} : if number - as determined by [ to_number ];
+--
+-- E.g.: case when uis_utils.is_number( '21345.56' ) = 1  then ... else ... end;
+--
+create or replace function  uis_utils.IS_NUMBER( str_nbr	in varchar2 )
+  RETURN INT
+IS
+  is_nbr	NUMBER;
+BEGIN
+   is_nbr := to_number(str_nbr);
+   return 1;
+  
+EXCEPTION
+   WHEN VALUE_ERROR THEN
+   return 0;
+   
+END; 	-- uis_utils.IS_NUMBER;
+--
+grant execute on uis_utils.IS_NUMBER  to public;
+
+   
+-- GET_NUMBER: Accepts a string as input and returns a numeric as the result.
+-- ...returns {0} if string is not numeric;
+-- ...returns [to_number( str )] otherwise;
+--
+-- NOTE: Simple formatting is removed: commas and dollar sign ($)
+--
+-- E.g.: select uis_utils.get_number( '21345.56' ) from dual;
+-- ...or select uis_utils.get_number( '$1,234.56' ) from dual;
+-- 
+
+create or replace function  uis_utils.GET_NUMBER( 
+   str_nbr		in VARCHAR2
+   , fmt		in VARCHAR2		default NULL
+)  return NUMBER
+is 
+  r_number 			NUMBER := 0;
+  str_nbr_prep		VARCHAR2( 1000 );
+
+BEGIN  
+   -- strip out commas and dollar sign ($)...
+   str_nbr_prep := replace( replace( str_nbr, ',', NULL ), '$', NULL );
+
+   if ( uis_utils.is_number( str_nbr_prep) = 0 )
+   then
+      return r_number;
+   end if; 
+	     
+   if ( fmt is null )
+   then  
+		r_number := to_number( str_nbr_prep );
+   else 
+		r_number := to_number( str_nbr_prep, fmt );
+   end if;
+  
+  return r_number; 
+  
+END ;		-- uis_utils.GET_NUMBER;
+--
+grant execute on uis_utils.GET_NUMBER  to public;
 
