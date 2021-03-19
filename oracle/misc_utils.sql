@@ -200,3 +200,79 @@ END ;		-- uis_utils.GET_NUMBER;
 --
 grant execute on uis_utils.GET_NUMBER  to public;
 
+   
+-- REPLACE_ABBRV: Replace an abbreviated term with the real term/phrase - using [team.ABBREVIATIONS].
+-- ...for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
+--
+-- ...retuns the abbreviation passed in if a replacement is not found.
+-- 
+create or replace function  uis_utils.REPLACE_ABBRV( 
+   str_to_acton			in VARCHAR2
+   , use_acronym_set	in VARCHAR2		default 'BANNER'
+)  return VARCHAR2
+is 
+  str_acted_on		VARCHAR2( 250 );
+
+BEGIN  
+   
+   str_acted_on := str_to_acton ;	-- Default to what was passed in, for case nothing found.
+
+   if ( use_acronym_set	= 'BANNER' ) 
+   then
+      select phrase into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_banner = 'Y' ;
+	  
+   else		-- Punt and use Campus Announcements...
+      select phrase into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_announcements = 'Y' ;
+
+   end if; 
+  
+   return str_acted_on; 
+  
+EXCEPTION
+
+   WHEN OTHERS THEN	return  str_acted_on;
+   
+END ;		-- uis_utils.REPLACE_ABBRV;
+--
+grant execute on uis_utils.REPLACE_ABBRV  to public;
+
+/* REPLACE_ABBRV_ALL: Replace all the abbreviations in a string with their real term/phrase - using [team.ABBREVIATIONS].
+...for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
+
+...retuns the string passed if no abbreviations were replaced.
+
+Note;	MAX string size passed in should be 4000, or less;
+		Hyphens are not considered a separator (some acronyms use hyphens);
+		New lines and chariage reurns are not handled (yet);
+*/
+create or replace function  uis_utils.REPLACE_ABBRV_ALL( 
+   str_to_acton			in VARCHAR2
+   , use_acronym_set	in VARCHAR2		default 'BANNER'
+)  return VARCHAR2
+is 
+  str_acted_on		VARCHAR2( 4000 );
+
+BEGIN  
+   
+   str_acted_on := NULL ;	-- Default to what was passed in, for case nothing found.
+
+   for i in ( select trim( regexp_substr( str_to_acton, '[^ ]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( str_to_acton, ' ') +1
+   )
+   loop
+      -- dbms_output.put_line( i.l );
+	  str_acted_on := str_acted_on ||' '|| uis_utils.REPLACE_ABBRV( i.l, use_acronym_set );
+
+   end loop;
+   
+   -- remove leading space added for 1st term, before returning item   
+   return ltrim( str_acted_on ); 
+  
+EXCEPTION
+
+   WHEN OTHERS THEN	return  str_acted_on;
+   
+END ;		-- uis_utils.REPLACE_ABBRV_ALL;
+--
+grant execute on uis_utils.REPLACE_ABBRV_ALL  to public;
+
+
