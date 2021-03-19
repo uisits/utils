@@ -275,4 +275,3 @@ END ;		-- uis_utils.REPLACE_ABBRV_ALL;
 --
 grant execute on uis_utils.REPLACE_ABBRV_ALL  to public;
 
-
