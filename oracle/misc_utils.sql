@@ -200,32 +200,60 @@ END ;		-- uis_utils.GET_NUMBER;
 --
 grant execute on uis_utils.GET_NUMBER  to public;
 
-   
--- REPLACE_ABBRV: Replace an abbreviated term with the real term/phrase - using [team.ABBREVIATIONS].
--- ...for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
---
--- ...retuns the abbreviation passed in if a replacement is not found.
--- 
+/*
+-- REPLACE_ABBRV: Act on an item for replacements based upoin flags passed in.
+
+keep_acronym_flag - Looks for entry in the SMARTCAP table, and uses it for the replacement.
+...otherwise the ABBREVIATIONS table is used.
+
+initcap_flag - If no replacement value is found (either SMARTCAP or ABBREVIATIONS) based upon
+	the request, an initcap() is performed.  Most like used in structured settings - e.g., Titles.
+
+use_acronym_set : for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
+	...guides which replacement set is used.
+	
+If no substitutions were made, returns the exact same term passed in - depending on request.
+...e.g., if [initcap_flag=Y], then that utility will be ran.
+
+See:	SMARTCAP() - parses through a string passing each item to this utility.
+
+*/
 create or replace function  uis_utils.REPLACE_ABBRV( 
-   str_to_acton			in VARCHAR2
-   , use_acronym_set	in VARCHAR2		default 'BANNER'
+   str_to_acton			in varchar2
+   , initcap_flag		in varchar2		default 'Y'
+   , keep_acronym_flag	in varchar2		default 'Y'
+   , use_acronym_set	in varchar2		default 'BANNER'
 )  return VARCHAR2
 is 
   str_acted_on		VARCHAR2( 250 );
 
 BEGIN  
    
-   str_acted_on := str_to_acton ;	-- Default to what was passed in, for case nothing found.
+   -- str_acted_on := str_to_acton ;	-- Default to what was passed in, for case nothing found.
+   str_acted_on := NULL;
 
-   if ( use_acronym_set	= 'BANNER' ) 
+   if ( keep_acronym_flag = 'Y' )
    then
-      select phrase into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_banner = 'Y' ;
+      select max( ret_value ) into str_acted_on  from team.SMARTCAP  where upper( term ) = upper( str_to_acton ) and is_active = 'Y' and dir_display_flag = 'Y' ;
+   end if;
+   
+   if ( str_acted_on is NULL ) 
+   then 
+      if ( use_acronym_set	= 'BANNER' ) 
+      then
+         select max( phrase ) into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_banner = 'Y' ;
 	  
-   else		-- Punt and use Campus Announcements...
-      select phrase into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_announcements = 'Y' ;
+      else		-- Punt and use Campus Announcements...
+         select max( phrase ) into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_announcements = 'Y' ;
 
-   end if; 
-  
+      end if; 
+	  
+	  if ( str_acted_on is NULL )  -- ...still nothing has been found, initcap() it.
+	  then
+	     str_acted_on := initcap( str_to_acton );
+	  end if;
+   end if;
+   
    return str_acted_on; 
   
 EXCEPTION
@@ -236,17 +264,23 @@ END ;		-- uis_utils.REPLACE_ABBRV;
 --
 grant execute on uis_utils.REPLACE_ABBRV  to public;
 
-/* REPLACE_ABBRV_ALL: Replace all the abbreviations in a string with their real term/phrase - using [team.ABBREVIATIONS].
-...for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
+/* SMARTCAP: Parse a string for replacements based upoin flags passed in.
 
-...retuns the string passed if no abbreviations were replaced.
+First string is split by comma, and then by spaces to get at each word.
+
+Splitting on periods requires too much context - were we at the end of the sentince, was MR. => Mister, ...
+...so skip for now - until it's absolutely wanted.   
 
 Note;	MAX string size passed in should be 4000, or less;
 		Hyphens are not considered a separator (some acronyms use hyphens);
 		New lines and chariage reurns are not handled (yet);
 */
-create or replace function  uis_utils.REPLACE_ABBRV_ALL( 
+-- drop function  uis_utils.REPLACE_ABBRV_ALL;
+--
+create or replace function  uis_utils.SMARTCAP( 
    str_to_acton			in VARCHAR2
+   , initcap_flag		in varchar2		default 'Y'
+   , keep_acronym_flag	in varchar2		default 'Y'
    , use_acronym_set	in VARCHAR2		default 'BANNER'
 )  return VARCHAR2
 is 
@@ -255,15 +289,35 @@ is
 BEGIN  
    
    str_acted_on := NULL ;	-- Default to what was passed in, for case nothing found.
-
-   for i in ( select trim( regexp_substr( str_to_acton, '[^ ]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( str_to_acton, ' ') +1
-   )
-   loop
-      -- dbms_output.put_line( i.l );
-	  str_acted_on := str_acted_on ||' '|| uis_utils.REPLACE_ABBRV( i.l, use_acronym_set );
-
-   end loop;
    
+   -- Split the input on [comma](s) as the delimiter - if they exists...
+   --
+   for  c  in ( select trim( regexp_substr( str_to_acton, '[^,]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( str_to_acton, ',') +1  )
+   loop
+      -- dbms_output.put_line( c.l );
+	  
+      -- Iterate across substring using a [space] as the delimiter...
+      --	  
+      for  i  in ( select trim( regexp_substr( c.l, '[^ ]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( c.l, ' ') +1  )
+      loop
+         -- dbms_output.put_line( i.l );
+	     str_acted_on := str_acted_on ||' '|| uis_utils.REPLACE_ABBRV( i.l, initcap_flag => initcap_flag, keep_acronym_flag => keep_acronym_flag, use_acronym_set => use_acronym_set );
+
+      end loop;	  
+	  
+	  -- If string passed does not match the size of the substring, then a comma split was was performed - and the comma needs added back
+	  --
+	  if ( length( str_to_acton ) != length( c.l ) )
+	  then
+	     str_acted_on := str_acted_on ||',';
+	  end if;
+
+   end loop;	-- string split on commas...
+   
+   -- As a precaution, remove trailing commas...
+   --
+   str_acted_on := rtrim( str_acted_on, ',' );
+
    -- remove leading space added for 1st term, before returning item   
    return ltrim( str_acted_on ); 
   
@@ -271,7 +325,7 @@ EXCEPTION
 
    WHEN OTHERS THEN	return  str_acted_on;
    
-END ;		-- uis_utils.REPLACE_ABBRV_ALL;
+END ;		-- uis_utils.SMARTCAP;
 --
-grant execute on uis_utils.REPLACE_ABBRV_ALL  to public;
+grant execute on uis_utils.SMARTCAP  to public;
 
