@@ -4,9 +4,18 @@ File:	utils/oracle/misc_utils.sql
 Desc:	Oracle utilities commonly needed across applications;
 		
 Utilities:	
-		uis_utils.term_to_semester( term_cd )
-		uis_utils.semester_to_term( semester ) 
-		uis_utils.is_online_crs( sched_type_cd )  ==> true, false
+		term_to_semester( term_cd )
+		semester_to_term( semester ) 
+		is_online_crs( sched_type_cd )  ==> true, false
+		get_sched_method( sched_type_cd )
+		get_sess_method( sess_cd )
+		is_number( <string in> )
+		get_number( <string_in> )
+		replace_abbrv()
+		replace_abbrv_all()
+		smartcap()
+		fmt_phone_nbr()
+		
 See:	
 	
 Author:	Vern Huber - Feb. 22, 2019  
@@ -15,6 +24,43 @@ Enhancements:
 		TBD
 		
 */
+-- FMT_PHONE_NBR: accepts a phone number formatted or not, and formats it in:
+-- ...fmt_style = 'classic' (default):	xxx xxx-xxxx  or xxx-xxxx (a)
+-- ...fmt_style = 'formal':				(xxx) xxx-xxxx  or xxx-xxxx (a)
+-- ...fmt_style = 'internet':			xxx.xxx.xxxx  or xxx.xxxx (a)
+-- ...fmt_style = 'raw' or any other value than { classic, formal, internet }:	Unformatted number (no whitespace)
+--
+-- (a) If a 7 digit value is passed in, after removing non-numeric digts (i.e, formatting).
+--
+-- E.g.:   select   uis_utils.term_to_semester( '420195' )  as sem   from dual;
+--
+create or replace function  uis_utils.fmt_phone_nbr( 
+   ph_nbr  			in varchar2
+   , fmt_style		in varchar2		default 'classic'
+)  return VARCHAR2  
+is
+   fmt_ph_nbr		varchar2( 20 ); 
+   nbr				varchar2( 100 ); 
+BEGIN 
+   -- Remove any current formatting...
+   nbr :=  regexp_replace( ph_nbr, '[[:alpha:][:punct:][:space:]]' );
+
+   fmt_ph_nbr := case 
+      when fmt_style = 'classic'  and length( nbr ) = 10	then substr( nbr, 1,3 ) ||' '|| substr( nbr, 4,3 ) ||'-'|| substr( nbr, 7,4 )
+      when fmt_style = 'classic'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,4 )
+      when fmt_style = 'formal'  and length( nbr ) = 10	then '('|| substr( nbr, 1,3 ) ||') '|| substr( nbr, 4,3 ) ||'-'|| substr( nbr, 7,4 )
+      when fmt_style = 'formal'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,4 )
+      when fmt_style = 'internet' and length( nbr ) = 10	then substr( nbr, 1,3 ) ||'.'|| substr( nbr, 4,3 ) ||'.'|| substr( nbr, 7,4 )
+      when fmt_style = 'internet'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'.'|| substr( nbr, 4,4 )
+      when length( nbr ) > 20	then 'Invalid Phone #'
+      else nbr
+   end;
+    
+  return fmt_ph_nbr; 
+  
+END;	-- of fmt_phone_nbr()
+--
+grant execute on uis_utils.fmt_phone_nbr  to public;
 
 -- TERM_TO_SEMESTER: pass in a term_cd (6 digits) and get back a semester (5 ditits)
 -- ...420198 --> 20193  (1: Spring;  2: Summer;  3: Fall;)
