@@ -5,11 +5,17 @@ File:	utils\sqlserver\pop_wdict_new_terms.sql
 		
 		{ wdict_general, wdict_preposition, wdict_conjunction }
 		
+		Changes here should be reflected in [team.ABBREVIATIONS] on Oracle.
+		
 See:	./wdict_tables.sql
+		utils/oracle/misc_utils.sql - Oracle utils [smartcap()] and [replace_abbrv()].
+		uitls/oracle/pop_abbreviations.sql
 
 Author: Vern Huber
 
 Caveats / Things to Consider:
+
+		team@oraprod:ABBREVIATIONS - related dictionary to migrate towards.
 		
 */
 USE msdb;

@@ -12,8 +12,7 @@ Utilities:
 		is_number( <string in> )
 		get_number( <string_in> )
 		replace_abbrv()
-		replace_abbrv_all()
-		smartcap()
+		smartcap() - iterates across a phrase and calls [replace_abbrv()] on each word.
 		fmt_phone_nbr()
 		
 See:	
@@ -25,10 +24,11 @@ Enhancements:
 		
 */
 -- FMT_PHONE_NBR: accepts a phone number formatted or not, and formats it in:
--- ...fmt_style = 'classic' (default):	xxx xxx-xxxx  or xxx-xxxx (a)
+-- ...fmt_style = 'classic' (default):	xxx-xxx-xxxx  or xxx-xxxx (a)
 -- ...fmt_style = 'formal':				(xxx) xxx-xxxx  or xxx-xxxx (a)
 -- ...fmt_style = 'internet':			xxx.xxx.xxxx  or xxx.xxxx (a)
 -- ...fmt_style = 'raw' or any other value than { classic, formal, internet }:	Unformatted number (no whitespace)
+-- ...if more than 10 digits (stripped formatting) present, the number is returned as passed in.
 --
 -- (a) If a 7 digit value is passed in, after removing non-numeric digts (i.e, formatting).
 --
@@ -46,14 +46,14 @@ BEGIN
    nbr :=  regexp_replace( ph_nbr, '[[:alpha:][:punct:][:space:]]' );
 
    fmt_ph_nbr := case 
-      when fmt_style = 'classic'  and length( nbr ) = 10	then substr( nbr, 1,3 ) ||' '|| substr( nbr, 4,3 ) ||'-'|| substr( nbr, 7,4 )
+      when fmt_style = 'classic'  and length( nbr ) = 10	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,3 ) ||'-'|| substr( nbr, 7,4 )
       when fmt_style = 'classic'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,4 )
       when fmt_style = 'formal'  and length( nbr ) = 10	then '('|| substr( nbr, 1,3 ) ||') '|| substr( nbr, 4,3 ) ||'-'|| substr( nbr, 7,4 )
       when fmt_style = 'formal'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,4 )
       when fmt_style = 'internet' and length( nbr ) = 10	then substr( nbr, 1,3 ) ||'.'|| substr( nbr, 4,3 ) ||'.'|| substr( nbr, 7,4 )
       when fmt_style = 'internet'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'.'|| substr( nbr, 4,4 )
       when length( nbr ) > 20	then 'Invalid Phone #'
-      else nbr
+      else ph_nbr
    end;
     
   return fmt_ph_nbr; 
@@ -247,13 +247,13 @@ END ;		-- uis_utils.GET_NUMBER;
 grant execute on uis_utils.GET_NUMBER  to public;
 
 /*
--- REPLACE_ABBRV: Act on an item for replacements based upoin flags passed in.
+REPLACE_ABBRV(): Act on a single item for replacement based upon flags passed in.
 
 keep_acronym_flag - Looks for entry in the SMARTCAP table, and uses it for the replacement.
 ...otherwise the ABBREVIATIONS table is used.
 
 initcap_flag - If no replacement value is found (either SMARTCAP or ABBREVIATIONS) based upon
-	the request, an initcap() is performed.  Most like used in structured settings - e.g., Titles.
+	the request, an initcap() is performed.  Most likely used in structured settings - e.g., Titles.
 
 use_acronym_set : for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
 	...guides which replacement set is used.
@@ -261,8 +261,12 @@ use_acronym_set : for Banner Titles (default: 'BANNER') or for Campus Announceme
 If no substitutions were made, returns the exact same term passed in - depending on request.
 ...e.g., if [initcap_flag=Y], then that utility will be ran.
 
+Note that there's a custom acronym table [SMARTCAP] used to override and keep an acronym if one
+is found (e.g., for CIO, IT, etc.), otherwise [ABBREVIATIONS] is used.
+
 See:	SMARTCAP() - parses through a string passing each item to this utility.
 
+		team.pop_abbreviations.sql for new entries to act on.
 */
 create or replace function  uis_utils.REPLACE_ABBRV( 
    str_to_acton			in varchar2
@@ -274,13 +278,14 @@ is
   str_acted_on		VARCHAR2( 250 );
 
 BEGIN  
+   -- SHOULD [keep_acronym_flag] use the [use_acronym_set] condition????
    
    -- str_acted_on := str_to_acton ;	-- Default to what was passed in, for case nothing found.
    str_acted_on := NULL;
 
    if ( keep_acronym_flag = 'Y' )
    then
-      select max( ret_value ) into str_acted_on  from team.SMARTCAP  where upper( term ) = upper( str_to_acton ) and is_active = 'Y' and dir_display_flag = 'Y' ;
+      select max( ret_value ) into str_acted_on  from team.SMARTCAP  where upper( term ) = upper( str_to_acton )  and is_active = 'Y'  and dir_display_flag = 'Y' ;
    end if;
    
    if ( str_acted_on is NULL ) 
@@ -294,10 +299,17 @@ BEGIN
 
       end if; 
 	  
-	  if ( str_acted_on is NULL )  -- ...still nothing has been found, initcap() it.
+	  if ( str_acted_on is NULL  and  initcap_flag = 'Y' )  -- ...still nothing has been found, initcap() it.
 	  then
 	     str_acted_on := initcap( str_to_acton );
 	  end if;
+	  
+	  -- ...if its still null, then INITCAP not requested - pass back what was passed in.
+	  if ( str_acted_on is NULL )  -- ...still nothing has been found, initcap() it.
+	  then
+	     str_acted_on :=  str_to_acton ;
+	  end if;
+	  
    end if;
    
    return str_acted_on; 
@@ -310,61 +322,137 @@ END ;		-- uis_utils.REPLACE_ABBRV;
 --
 grant execute on uis_utils.REPLACE_ABBRV  to public;
 
-/* SMARTCAP: Parse a string for replacements based upoin flags passed in.
+/* SMARTCAP: Parses a string for replacements based upon flags passed in.
 
-First string is split by comma, and then by spaces to get at each word.
+	First string is split by comma, and then by spaces to get at each word.
+	...a second pass is made by splitting on [/], and then by spaces.
 
-Splitting on periods requires too much context - were we at the end of the sentince, was MR. => Mister, ...
-...so skip for now - until it's absolutely wanted.   
+	Splitting on periods requires too much context - were we at the end of the sentence, was MR. => Mister, ...
+	...so skip for now - until it's absolutely wanted.   
 
+Input:
+
+	keep_acronym_flag - see prologue to [uis_utils.REPLACE_ABBRC()]
+
+	initcap_flag - see prologue to [uis_utils.REPLACE_ABBRC()]
+
+	use_acronym_set : for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
+	...guides which replacement set is used.
+	
+	title_xlat_flag : Y is for phras being acted on is a Banner title needing translated, so other flags 
+		are set accordingly (eliminiating the need to set them just so).
+	
 Note;	MAX string size passed in should be 4000, or less;
 		Hyphens are not considered a separator (some acronyms use hyphens);
-		New lines and chariage reurns are not handled (yet);
+		New lines and charriage returns are not handled (yet);
 */
--- drop function  uis_utils.REPLACE_ABBRV_ALL;
 --
 create or replace function  uis_utils.SMARTCAP( 
    str_to_acton			in VARCHAR2
    , initcap_flag		in varchar2		default 'Y'
    , keep_acronym_flag	in varchar2		default 'Y'
    , use_acronym_set	in VARCHAR2		default 'BANNER'
+   , title_xlat_flag	in VARCHAR2		default 'N'
 )  return VARCHAR2
 is 
-  str_acted_on		VARCHAR2( 4000 );
+  
+  l_initcap_flag		VARCHAR2( 1 );	
+  l_keep_acronym_flag	VARCHAR2( 1 );
+  l_use_acronym_set		VARCHAR2( 10 );
+  str_to_act_on_amp		VARCHAR2( 4000 );
+  str_acted_on			VARCHAR2( 4000 );
+  str_acted_on_4_comma	VARCHAR2( 4000 );	-- Placeholder for string parsed for comma (prelude to parsing for slash)
+  delimiter				VARCHAR2( 10 );		-- Handle Slashes (to remove space after a slash was in phrase - assumes word on each side)
 
 BEGIN  
    
    str_acted_on := NULL ;	-- Default to what was passed in, for case nothing found.
+   delimiter := ' ';
    
-   -- Split the input on [comma](s) as the delimiter - if they exists...
+   -- If being called to transform a title, reset flags accordingly.
    --
-   for  c  in ( select trim( regexp_substr( str_to_acton, '[^,]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( str_to_acton, ',') +1  )
+   l_initcap_flag		:= initcap_flag ;	
+   l_keep_acronym_flag	:= keep_acronym_flag ;
+   l_use_acronym_set		:= use_acronym_set ;
+   
+   if ( title_xlat_flag = 'Y' )
+   then
+      l_initcap_flag		:= 'Y' ;	
+      l_keep_acronym_flag	:= 'Y' ;
+      l_use_acronym_set		:= 'BANNER' ;
+   
+   end if;
+   
+   -- Before parsing, see if an exact match can be found - kludgy fix for HRs overloading of terms for titles.
+   -- ...eg PROF for Professor or Professional, to see if a hard-coded title match can be made.
+   -- 
+   if ( use_acronym_set	= 'BANNER' )
+   then
+      select max( phrase ) into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_banner = 'Y' ;
+	  
+      if ( str_acted_on  is not  NULL )  
+	  then
+	     return( str_acted_on );
+	  end if;
+	  
+	     
+      -- Banner Titles sometimes embed [&] without spaces - so add them, then remove extra ones...
+      str_to_act_on_amp := replace( replace( str_to_acton, '&', ' & ' ), '  ', ' ' );
+   
+	  -- else its NULL, and we are ready for parsing.
+   end if;
+   
+
+   -- Split the input on comma(s)[,] and then forward-slash(s)[/] as the delimiter - if they exists...and add back...
+   --
+   for  c  in ( select trim( regexp_substr( str_to_act_on_amp, '[^,]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( str_to_act_on_amp, '[,]') +1  )
    loop
       -- dbms_output.put_line( c.l );
-	  
-      -- Iterate across substring using a [space] as the delimiter...
+	  -- Iterate across substring using a [space] as the delimiter...
       --	  
       for  i  in ( select trim( regexp_substr( c.l, '[^ ]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( c.l, ' ') +1  )
       loop
-         -- dbms_output.put_line( i.l );
-	     str_acted_on := str_acted_on ||' '|| uis_utils.REPLACE_ABBRV( i.l, initcap_flag => initcap_flag, keep_acronym_flag => keep_acronym_flag, use_acronym_set => use_acronym_set );
+      -- dbms_output.put_line( 'c: i.1 = '|| i.l );
+	  
+		 -- Some abbreviations are removed - a space can be returned, so trim spaces off...
+		 --
+	     str_acted_on := trim( str_acted_on || delimiter || uis_utils.REPLACE_ABBRV( i.l, initcap_flag => l_initcap_flag, keep_acronym_flag => l_keep_acronym_flag, use_acronym_set => l_use_acronym_set ) );
 
       end loop;	  
-	  
-	  -- If string passed does not match the size of the substring, then a comma split was was performed - and the comma needs added back
-	  --
-	  if ( length( str_to_acton ) != length( c.l ) )
-	  then
-	     str_acted_on := str_acted_on ||',';
-	  end if;
+		 
+	  str_acted_on := str_acted_on ||',';	-- ...append a comma we split on
 
    end loop;	-- string split on commas...
    
-   -- As a precaution, remove trailing commas...
-   --
-   str_acted_on := rtrim( str_acted_on, ',' );
+   str_acted_on := rtrim( str_acted_on, ',' );	-- ...remove trailing comma
+   
+   str_acted_on_4_comma := str_acted_on;	str_acted_on := NULL;
+   
+   -- Now parse on string acted on for commas, and split on slash[/]...
+   for  s  in ( select trim( regexp_substr( str_acted_on_4_comma , '[^/]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( str_acted_on_4_comma , '[/]') +1  )
+   loop
+       -- dbms_output.put_line( s.l );
+	   -- Iterate across substring using a [space] as the delimiter...
+       --	  
+       for  i  in ( select trim( regexp_substr( s.l, '[^ ]+', 1, LEVEL )) l  from dual  CONNECT BY LEVEL <= regexp_count( s.l, ' ') +1  )
+       loop
+       -- dbms_output.put_line( 's: i.1 = '|| i.l );
+	   
+	      -- Some abbreviations are removed - a space can be returned, so trim spaces off...
+		  --
+	      str_acted_on := trim( str_acted_on || delimiter || uis_utils.REPLACE_ABBRV( i.l, initcap_flag => l_initcap_flag, keep_acronym_flag => l_keep_acronym_flag, use_acronym_set => l_use_acronym_set ) );
 
-   -- remove leading space added for 1st term, before returning item   
+          -- Reset [delimiter] to space...first word after a slash-split set it to nothing.
+	      delimiter := ' ';
+       end loop;
+
+       str_acted_on := str_acted_on ||'/';		-- ...append a slash we split on
+	   delimiter := '' ;		-- When a slash is detected, the delimiter to use for the next word is [nothing].
+
+   end loop;	-- string split on slashes..		 
+	
+   str_acted_on := rtrim( str_acted_on, '/' );		-- ...remove trailing [/]
+
    return ltrim( str_acted_on ); 
   
 EXCEPTION
