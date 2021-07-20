@@ -362,7 +362,7 @@ BEGIN
 	) t  group by t.param_cd ;
 	if ( SENT_FROM = '' ) then  param_err := 'Y';  end if;	
 	
-	if ( sent_by != '' )
+	if ( sent_by != '' or sent_by is not NULL )
 	then
 		SENT_FROM := SENT_BY;
 	end if;
