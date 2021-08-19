@@ -32,7 +32,6 @@ Enhancements:
 --
 -- (a) If a 7 digit value is passed in, after removing non-numeric digts (i.e, formatting).
 --
--- E.g.:   select   uis_utils.term_to_semester( '420195' )  as sem   from dual;
 --
 create or replace function  uis_utils.fmt_phone_nbr( 
    ph_nbr  			in varchar2
@@ -52,6 +51,7 @@ BEGIN
       when fmt_style = 'formal'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,4 )
       when fmt_style = 'internet' and length( nbr ) = 10	then substr( nbr, 1,3 ) ||'.'|| substr( nbr, 4,3 ) ||'.'|| substr( nbr, 7,4 )
       when fmt_style = 'internet'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'.'|| substr( nbr, 4,4 )
+	  when length( nbr ) = 5	then 'x'|| nbr
       when length( nbr ) > 20	then 'Invalid Phone #'
       else ph_nbr
    end;
@@ -345,6 +345,11 @@ Input:
 Note;	MAX string size passed in should be 4000, or less;
 		Hyphens are not considered a separator (some acronyms use hyphens);
 		New lines and charriage returns are not handled (yet);
+		
+		Title and Departments with the name spelled out and the acronym will result in double naming.
+		...Banner change to address the issue?  ...or try to handle in this utility.
+		...e.g.: this should work:
+		select 'Office of Engaged Learning Office of Engaged Learning' str_in, regexp_replace('Office of Engaged Learning Office of Engaged Learning', '(.*)(.*)\1', '\1\2') str_out  from  dual;
 */
 --
 create or replace function  uis_utils.SMARTCAP( 
