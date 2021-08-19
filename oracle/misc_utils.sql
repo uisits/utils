@@ -40,17 +40,22 @@ create or replace function  uis_utils.fmt_phone_nbr(
 is
    fmt_ph_nbr		varchar2( 20 ); 
    nbr				varchar2( 100 ); 
+   fmt_delimiter	varchar2( 1 );
 BEGIN 
    -- Remove any current formatting...
    nbr :=  regexp_replace( ph_nbr, '[[:alpha:][:punct:][:space:]]' );
 
+   if ( fmt_style = 'internet' )
+   then  
+		fmt_delimiter := '.';
+   else 
+		fmt_delimiter := '-';	-- classic or formal
+   end if;
+
    fmt_ph_nbr := case 
-      when fmt_style = 'classic'  and length( nbr ) = 10	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,3 ) ||'-'|| substr( nbr, 7,4 )
-      when fmt_style = 'classic'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,4 )
-      when fmt_style = 'formal'  and length( nbr ) = 10	then '('|| substr( nbr, 1,3 ) ||') '|| substr( nbr, 4,3 ) ||'-'|| substr( nbr, 7,4 )
-      when fmt_style = 'formal'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'-'|| substr( nbr, 4,4 )
-      when fmt_style = 'internet' and length( nbr ) = 10	then substr( nbr, 1,3 ) ||'.'|| substr( nbr, 4,3 ) ||'.'|| substr( nbr, 7,4 )
-      when fmt_style = 'internet'  and length( nbr ) = 7	then substr( nbr, 1,3 ) ||'.'|| substr( nbr, 4,4 )
+      when fmt_style = 'formal'  and length( nbr ) = 10		then '('|| substr( nbr, 1,3 ) ||') '|| substr( nbr, 4,3 ) || fmt_delimiter || substr( nbr, 7,4 )
+      when length( nbr ) = 10	then substr( nbr, 1,3 ) || fmt_delimiter || substr( nbr, 4,3 ) || fmt_delimiter || substr( nbr, 7,4 )	  
+      when length( nbr ) = 7	then substr( nbr, 1,3 ) || fmt_delimiter || substr( nbr, 4,4 )
 	  when length( nbr ) = 5	then 'x'|| nbr
       when length( nbr ) > 20	then 'Invalid Phone #'
       else ph_nbr
