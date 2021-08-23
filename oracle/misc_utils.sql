@@ -306,7 +306,8 @@ BEGIN
 	  
 	  if ( str_acted_on is NULL  and  initcap_flag = 'Y' )  -- ...still nothing has been found, initcap() it.
 	  then
-	     str_acted_on := initcap( str_to_acton );
+	     -- initcap() will cap the 'S' on possesive s
+	     str_acted_on := replace( initcap( str_to_acton ), '''S', '''s' );
 	  end if;
 	  
 	  -- ...if its still null, then INITCAP not requested - pass back what was passed in.
