@@ -260,7 +260,9 @@ keep_acronym_flag - Looks for entry in the SMARTCAP table, and uses it for the r
 initcap_flag - If no replacement value is found (either SMARTCAP or ABBREVIATIONS) based upon
 	the request, an initcap() is performed.  Most likely used in structured settings - e.g., Titles.
 
-use_acronym_set : for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
+use_acronym_set : for Banner Titles (default: 'BANNER') 
+	or for Campus Announcements ('ANNOUNCEMENTS')
+	or for Course Evaluations ('CRSEVALS')
 	...guides which replacement set is used.
 	
 If no substitutions were made, returns the exact same term passed in - depending on request.
@@ -298,6 +300,10 @@ BEGIN
       if ( use_acronym_set	= 'BANNER' ) 
       then
          select max( phrase ) into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_banner = 'Y' ;
+		 
+	  elsif ( use_acronym_set	= 'CRSEVALS' ) 
+	  then
+	     select max( phrase ) into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_crs_eval = 'Y' ;
 	  
       else		-- Punt and use Campus Announcements...
          select max( phrase ) into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_announcements = 'Y' ;
@@ -334,7 +340,7 @@ grant execute on uis_utils.REPLACE_ABBRV  to public;
 	First string is split by comma, and then by spaces to get at each word.
 	...a second pass is made by splitting on [/], and then by spaces.
 
-	Splitting on periods requires too much context - were we at the end of the sentence, was MR. => Mister, ...
+	Splitting on periods requires too much context - eg, were we at the end of the sentence, was MR. => Mister, ...
 	...so skip for now - until it's absolutely wanted.   
 
 Input:
@@ -343,7 +349,9 @@ Input:
 
 	initcap_flag - see prologue to [uis_utils.REPLACE_ABBRC()]
 
-	use_acronym_set : for Banner Titles (default: 'BANNER') or for Campus Announcements ('ANNOUNCEMENTS')
+	use_acronym_set : for Banner Titles (default: 'BANNER') 
+	...or for Campus Announcements ('ANNOUNCEMENTS')
+	...or for Course Evaluations ('CRSEVALS')
 	...guides which replacement set is used.
 	
 	title_xlat_flag : Y is for phras being acted on is a Banner title needing translated, so other flags 
@@ -395,10 +403,20 @@ BEGIN
    
    end if;
    
+   -- If Crs Evals, set acronym set back - since term-value pairs are more restrictive...
+   if ( use_acronym_set	= 'CRSEVALS' )
+   then
+      l_initcap_flag		:= 'Y' ;	
+      l_keep_acronym_flag	:= 'Y' ;
+      l_use_acronym_set		:= 'CRSEVALS' ;
+   
+   end if;
+   
+   
    -- Before parsing, see if an exact match can be found - kludgy fix for HRs overloading of terms for titles.
    -- ...eg PROF for Professor or Professional, to see if a hard-coded title match can be made.
    -- 
-   if ( use_acronym_set	= 'BANNER' )
+   if ( use_acronym_set	= 'BANNER'  or  use_acronym_set	= 'CRSEVALS')
    then
       select max( phrase ) into str_acted_on  from team.ABBREVIATIONS where upper( acronym ) = upper( str_to_acton ) and is_abbrv_banner = 'Y' ;
 	  
@@ -407,8 +425,7 @@ BEGIN
 	     return( str_acted_on );
 	  end if;
 	  
-	     
-      -- Banner Titles sometimes embed [&] without spaces - so add them, then remove extra ones...
+      -- Banner Titles (and Department Names (for Course Evals) sometimes embed [&] without spaces - so add them, then remove extra ones...
       str_to_act_on_amp := replace( replace( str_to_acton, '&', ' & ' ), '  ', ' ' );
    
 	  -- else its NULL, and we are ready for parsing.
