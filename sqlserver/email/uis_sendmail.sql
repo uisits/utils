@@ -169,7 +169,13 @@ Examples:
 			
 		exec msdb.dbo.uis_sendmail @to = ''vhube3@uis.edu'', @subject = ''ITS Mtce...''
 			, @body = ''<b>ITS Mtce</b> Your attention please...'', @body_format = ''html'', @group_id = 11
-			
+		
+		Eg of using the [FROM ADDRESS]:
+		exec msdb.dbo.uis_sendmail @to = ''vhube3@uis.edu'', @subject = ''Scholarship Submission Reminder''
+			, @from_address = ''UIS Office of Financial Assistance <finaid@uis.edu>''
+			, @body_format = ''html'', @group_id = 1005, @body = ''...yadda, yadda...'' 
+ 
+ 
 		exec msdb.dbo.uis_sendmail	<-- to get this prolgue/help page.
 '
       return 1;
