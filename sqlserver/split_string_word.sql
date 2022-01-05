@@ -34,7 +34,9 @@ Desc:	This utility accepts string input, and returns a substring based upon the
 		
 		return_first_part : File exist, and the value is the size of the file;
 		
-Note:	
+Note:	If word-delimiter is not found, string passed in is returned.
+
+Note 2:	string_split() - MS SQL built in is not available in 2016 DB version.
 		
 Enhancements:
 		
@@ -63,12 +65,14 @@ Examples:
    declare @delim_sz		int;
    declare @delim_fnd_at	int;
    declare @delim_offset	int;
-	
+   declare @this_str_sz		int;
+
    set @delim_fnd_at = charindex( @word_delimiter, @split_this, 0 ) ;
-   
+   set @this_str_sz = len( @split_this ) ;
+
    if ( @delim_fnd_at = 0 )		-- Delimiter not found - DONE, nothing else to do...
    begin 
-      return( NULL );
+      return( @split_this );
    end;
    
    set @delim_sz = len( @word_delimiter );
@@ -89,7 +93,7 @@ Examples:
       begin
          set @delim_offset = 0;
       end;
-      set @sub_this = substring( @split_this, @delim_fnd_at + @delim_offset, len( @split_this ) );
+      set @sub_this = substring( @split_this, @delim_fnd_at + @delim_offset, @this_str_sz );
    end;
 
    return( @sub_this );

@@ -9,7 +9,7 @@ Note:	Some re-working may need to occur depending on when a term is no longer
 See:	[ CDM/all/all_semesters.sql ] - Oracle counterpart view object and supporting objects.
 		...formerly at [utils/oracle/vw_semester.sql ];
 
-		[ utils/sqlserver/vw_sem_alternate.sql ] - different semester window defition;
+		[ utils/sqlserver/vw_sem_alternate.sql ] - different semester window definition;
 		
 Enhancements:
 		* Convert this to call against the Oracle view (so logic is in one place).
@@ -26,6 +26,11 @@ Schema:	current_term	: Current term ID, e.g. 420151
 		
 		academic_year	: Academic year, e.g. 1415
 
+See also:
+		CDM/all/all_semesters.sql
+		CDM/all/vw_semester.sql
+		utils/sqlserver/all_semesters.sql
+		
 Author: Vern Huber
 		2/19/2020 : Issue arose Summer '19 - and forwards but not with Spr'18, where [academic_yr_cd]
 		was ok using [openquery] directly, but not via a view.  Solution was to enclose fields in the
