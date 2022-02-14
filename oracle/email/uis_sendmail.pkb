@@ -27,6 +27,16 @@ Note:	For UIS email, the sending server (hosting the DB) will need to be white l
 		exec DBMS_NETWORK_ACL_ADMIN.ASSIGN_ACL(acl => 'utl_smtp.xml',host => 'smtp.uis.edu', lower_port => 25, upper_port => 25 );
 		commit;
 
+...CHANGES 2/11/2022 to accomadate coming switchover to ProofPoint:
+...worked on OraTest 
+		alter system set smtp_out_server= 'smtp-pod.uis.edu';
+		exec DBMS_NETWORK_ACL_ADMIN.CREATE_ACL(acl => 'utl_smtp.xml',description => 'send_mail ACL',principal => 'PUBLIC',is_grant => true,privilege => 'connect');
+		exec DBMS_NETWORK_ACL_ADMIN.ADD_PRIVILEGE(acl => 'utl_smtp.xml',principal => 'PUBLIC',is_grant  => true,privilege => 'connect');
+		exec DBMS_NETWORK_ACL_ADMIN.ASSIGN_ACL(acl => 'utl_smtp.xml',host => 'smtp-pod.uis.edu', lower_port => 25, upper_port => 25 );
+		commit;
+...apply pakcage change, to: send_html();
+		
+		
 		col HOST for a45
 		SELECT host, lower_port, upper_port, privilege, status FROM   user_network_acl_privileges;
 
@@ -263,8 +273,9 @@ PROCEDURE send_html( sent_by  CLOB  default '',  to_list  CLOB,  cc_list  CLOB d
 )
 IS
     conn 		UTL_SMTP.CONNECTION;
-    EmailServer     VARCHAR2(20)  	:= 'smtp.uis.edu';   -- 'localhost';
- 
+    -- EmailServer     VARCHAR2(20)  	:= 'smtp.uis.edu';   -- 'localhost';
+    EmailServer     VARCHAR2(20)  	:= 'smtp-pod.uis.edu';   -- 'localhost';
+
 	TO_HDR		CLOB := 'To: ';
 	CC_HDR		CLOB := 'CC: ';
 	SENT_FROM 	CLOB := '';
