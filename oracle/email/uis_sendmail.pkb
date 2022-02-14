@@ -104,8 +104,9 @@ CREATE OR REPLACE PACKAGE uis_utils.uis_sendmail  as
 END ;
 /
 
-CREATE OR REPLACE PACKAGE BODY uis_utils.uis_sendmail  as
 
+CREATE OR REPLACE PACKAGE BODY uis_utils.uis_sendmail  
+as
 FUNCTION split (in_string VARCHAR2, delimiter VARCHAR2) RETURN t_array 
 IS 
 	i       	NUMBER :=0; 
@@ -533,4 +534,3 @@ END send_html;
 
 -- END of PKG uis_utils.uis_sendmail
 END ;
-/
