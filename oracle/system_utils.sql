@@ -37,8 +37,9 @@ END;
 
 
 -- ==========================  Code =====================================================
-
-
+--
+-- exec uis_utils.get_storage_metrics( 'vhube3@uis.edu' ); 
+--
 create or replace procedure  uis_utils.get_storage_metrics( send_to  	in varchar2 )
 is
 		msg_body			CLOB;
