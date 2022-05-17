@@ -56,7 +56,10 @@ AS
 SELECT * FROM OPENQUERY( ORATEST, 'select  PARAM_ID, PARAM_CD, PARAM_NAME, PARAM_VALUE, PARAM_DESC, PARAM_TYPE  
    from uis_utils.uis_sys_param_lkp  where uis_delete_flg = ''N'' ')
 ;
--- Refresh APP_PARAM_LKP table (so it behaves like an Oracle Material View)...
+-- Refresh procedure for APP_PARAM_LKP table (so it behaves like an Oracle Material View)...
+-- 
+-- ...invoke: exec dbo.refresh_app_param_lkp ;
+--
 use MSDB
 alter PROCEDURE [dbo].[refresh_app_param_lkp]
 as
@@ -84,7 +87,7 @@ as
 --
 grant execute on dbo.refresh_app_param_lkp to SANDAL;
 
--- Refresh object:  exec dbo.refresh_app_param_lkp (delete case);
+-- Refresh object:  exec dbo.delete_app_param_lkp (delete case);
 use MSDB;
 --
 alter PROCEDURE dbo.delete_app_param_lkp( @PARAM_ID varchar(10) , @PARAM_CD varchar(10))
