@@ -51,7 +51,7 @@ BEGIN
 END;
 
 
--- ==========================  Code =====================================================
+-- =============================  Tables / Views =======================================
 
 -- Define supporting objects here (since there is only 1 initially)
 --
@@ -63,8 +63,7 @@ grant select on role_tab_privs to uis_utils;
 grant select on dba_role_privs to uis_utils;
 grant select on dba_users to uis_utils;
 
--- create table uis_utils.ALL_VALID_PRIVS
---
+-- Current privileges - to compare against what has already been blessed (in ALL_VALID_PRIVS...
 create or replace view uis_utils.CUR_ALL_VALID_PRIVS
 as
 select  distinct  drp.grantee, rtp.owner, rtp.table_name, rtp.role as grantor, rtp.privilege, rtp.grantable, rtp.common
@@ -75,15 +74,25 @@ select  distinct  dtp.grantee, dtp.owner, dtp.table_name, dtp.grantor, dtp.privi
    , dtp.type as obj_type, dtp.inherited, 'SCHEMA' as grant_type
 from  DBA_TAB_PRIVS  DTP 
 ;
+
+-- Create a table based upon the current privileges - later they will be compared against.
+--
+create table uis_utils.ALL_VALID_PRIVS
+as
+select * from uis_utils.CUR_ALL_VALID_PRIVS ;
+--
+-- ...now add dates for when an entry was created, and rather to display an entry.
 --
 alter table uis_utils.ALL_VALID_PRIVS  add created_dt DATE default sysdate;
 alter table uis_utils.ALL_VALID_PRIVS  add is_display varchar2( 1 ) default 'Y';
 
--- Make it easier to peruse the data set ...is_display = 'Y'
+-- ...exempt some entries from being displayed - i.e., we do not care to see in daily report.
+--
 update uis_utils.ALL_VALID_PRIVS    set is_display= 'N' where grantee IN (
    'SYS','DBA','DEVELOPER_DICT_ROLE','EM_EXPRESS_BASIC','EXP_FULL_DATABASE','CWM_USER'
 ) or grantee LIKE 'APEX%';
 
+-- ======================================= CODE ==============================================
 
 /*
 Pass in a table to rebuild 
