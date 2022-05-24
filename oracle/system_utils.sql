@@ -49,7 +49,7 @@ is
 begin
 
 	declare 
-		cursor size_cur  is  select * from uis_utils.STORAGE_METRICS ;
+		cursor size_cur  is  select * from uis_utils.STORAGE_METRICS  order by percent_free asc ;
 
 		a_rec	size_cur%rowtype;
 	begin
