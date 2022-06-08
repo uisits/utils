@@ -92,6 +92,9 @@ Usage:	For general campus wide emails:
     		
 		For ITS Mtce emails (to campus):
 		exec uis_utils.uis_sendmail.send_html( to_list => 'vhube3@uis.edu', subject => 'ITS Mtce Subject', body_of_msg => 'ITS is needing you to...', group_id => 11 ) 
+		
+		...if [test_only] is set to anything other than 'N', the email is sent to a fake SMTP server and does not go out.
+		...currently this is the Docker MailHog server.
 */
 CREATE OR REPLACE PACKAGE uis_utils.uis_sendmail  as
 
@@ -106,7 +109,7 @@ CREATE OR REPLACE PACKAGE uis_utils.uis_sendmail  as
 
 	PROCEDURE	send_plain(recipient LONG, from_hdr LONG, to_hdr LONG, cc_hdr LONG, subject LONG, text LONG);
 
-	PROCEDURE	send_html( sent_by CLOB  default '',  to_list CLOB,  cc_list CLOB default '',  subject CLOB,  body_of_msg CLOB,  group_id  NUMBER  default 10);
+	PROCEDURE	send_html( sent_by CLOB  default '',  to_list CLOB,  cc_list CLOB default '',  subject CLOB,  body_of_msg CLOB,  group_id  NUMBER  default 10,  test_only VARCHAR2 default 'N');
 
 END ;
 /
@@ -277,7 +280,7 @@ END send_plain;
 -- PROCEDURE SEND_HTML_CLOB( sent_by CLOB, to_list CLOB, 
 --
 PROCEDURE send_html( sent_by  CLOB  default '',  to_list  CLOB,  cc_list  CLOB default '',  subject  CLOB,  body_of_msg  CLOB
-	, group_id  NUMBER  default 10 
+	, group_id  NUMBER  default 10 , test_only VARCHAR2 default 'N'
 )
 IS
     conn 		UTL_SMTP.CONNECTION;
@@ -342,20 +345,29 @@ BEGIN
 	) t  group by t.param_cd ;
 	if ( SENT_FROM = '' ) then  param_err := 'Y';  end if;	
 	
-	select max( param_value ) keep ( dense_rank  first  order by param_id  desc ) into SMTP_SERVER  from (
-		select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = group_id  and  PARAM_CD = 'SMTP_SERVER'
-		union 
-		select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = 10 and  PARAM_CD = 'SMTP_SERVER' 
-	) t  group by t.param_cd ;
-	if ( SMTP_SERVER = '' ) then  param_err := 'Y';  end if;	
+	-- See if we are being called for a test only send - this determines how to configure the SMTP Server and Port.
+	--
+	if ( test_only != 'N' )
+	then
+		SMTP_SERVER := 'uisdocker3.uisad.uis.edu';
+		SMTP_PORT := 1025;
+	else
+		select max( param_value ) keep ( dense_rank  first  order by param_id  desc ) into SMTP_SERVER  from (
+			select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = group_id  and  PARAM_CD = 'SMTP_SERVER'
+			union 
+			select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = 10 and  PARAM_CD = 'SMTP_SERVER' 
+		) t  group by t.param_cd ;
+		if ( SMTP_SERVER = '' ) then  param_err := 'Y';  end if;	
 	
-	select max( to_number( param_value ) ) keep ( dense_rank  first  order by param_id  desc ) into SMTP_PORT  from (
-		select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = group_id  and  PARAM_CD = 'SMTP_PORT'
-		union 
-		select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = 10 and  PARAM_CD = 'SMTP_PORT' 
-	) t  group by t.param_cd ;
-	if ( SMTP_PORT = '' ) then  param_err := 'Y';  end if;
-	
+		select max( to_number( param_value ) ) keep ( dense_rank  first  order by param_id  desc ) into SMTP_PORT  from (
+			select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = group_id  and  PARAM_CD = 'SMTP_PORT'
+			union 
+			select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = 10 and  PARAM_CD = 'SMTP_PORT' 
+		) t  group by t.param_cd ;
+		if ( SMTP_PORT = '' ) then  param_err := 'Y';  end if;
+		
+	end if;		-- ...test_only mode (to set SMTP server accordingly).
+		
 	-- If the caller passed in an account they wish to send this email as, override what we currently have now.
 	--
 	if ( sent_by != '' or sent_by is not NULL )
@@ -363,6 +375,7 @@ BEGIN
 		SENT_FROM := SENT_BY;
 	end if;
 	
+
 	-- Append the group we are working with as a debugging aid.
 	HTML_TAIL := HTML_TAIL || '<style> font.its_tail { color:grey;font-size:7pt; } </style><font class="its_tail">(appId = '|| group_id ||' ) ';
 	 
