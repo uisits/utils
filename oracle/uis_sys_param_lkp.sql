@@ -5,7 +5,7 @@ select
    PARAM_SEQ_NO, PARAM_ID, PARAM_CD, PARAM_NAME, PARAM_TYPE, PARAM_DESC, PARAM_VALUE
    , created_by as UIS_CREATED_BY,  created_dt as UIS_CREATED_DT,  delete_flg as UIS_DELETE_FLG
    , modified_by as UIS_MODIFIED_BY,  modified_dt as UIS_MODIFIED_DT,  source_sys_id as UIS_SOURCE_SYS_ID
-from team.APP_PARAM_LKP  
+from team.ACT_APP_PARAM_LKP  
 ;
 grant select on team.APP_PARAM_LKP to DEPT_PRIVATE with grant option;
 grant select on team.APP_PARAM_LKP to UIS_UTILS with grant option;
