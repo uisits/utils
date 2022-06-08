@@ -9,8 +9,8 @@ Desc:	Standardized email wrapper for sending UIS related emails allowing for cus
 		This SAME UTILITY CAN BE APPLIED on each Oracle instance server, but it does rely 
 		on underlying DB objects, e.g.:
 		
-		uis_utils.UIS_SYS_PARAM_LKP - see GIT [utils/oracle] and [CDM/department/uis_utils] 
-		for background information.
+		uis_utils.UIS_SYS_PARAM_LKP | team.ACT_APP_PARAM_LKP - see GIT [utils/oracle] 
+		...and [CDM/department/uis_utils] for background information.
 		
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	
@@ -35,6 +35,13 @@ Note:	For UIS email, the sending server (hosting the DB) will need to be white l
 		exec DBMS_NETWORK_ACL_ADMIN.ASSIGN_ACL(acl => 'utl_smtp.xml',host => 'smtp-pod.uis.edu', lower_port => 25, upper_port => 25 );
 		commit;
 ...apply pakcage change, to: send_html();
+
+...CHANGES for MAILHOG (Docker uses) - allows per app to select which mailserver to use
+		-- No need to reset SMTP out for everyone...
+		exec DBMS_NETWORK_ACL_ADMIN.CREATE_ACL(acl => 'utl_smtp_docker.xml',description => 'send_mail ACL',principal => 'PUBLIC',is_grant => true,privilege => 'connect');
+		exec DBMS_NETWORK_ACL_ADMIN.ADD_PRIVILEGE(acl => 'utl_smtp_docker.xml',principal => 'PUBLIC',is_grant  => true,privilege => 'connect');
+		exec DBMS_NETWORK_ACL_ADMIN.ASSIGN_ACL(acl => 'utl_smtp_docker.xml',host => 'uisdocker3.uisad.uis.edu', lower_port => 1025, upper_port => 1025 );
+		commit;
 		
 		
 		col HOST for a45
@@ -274,9 +281,8 @@ PROCEDURE send_html( sent_by  CLOB  default '',  to_list  CLOB,  cc_list  CLOB d
 )
 IS
     conn 		UTL_SMTP.CONNECTION;
-    -- EmailServer     VARCHAR2(20)  	:= 'smtp.uis.edu';   -- 'localhost';
-    EmailServer     VARCHAR2(20)  	:= 'smtp-pod.uis.edu';   -- 'localhost';
-
+    SMTP_SERVER     VARCHAR2(100);	-- eg, smtp.uis.edu, vs uisdocker3.uisad.uis.edu
+	SMTP_PORT		NUMBER ;		-- eg, 25 vs 1025 (respectively for server eg above)
 	TO_HDR		CLOB := 'To: ';
 	CC_HDR		CLOB := 'CC: ';
 	SENT_FROM 	CLOB := '';
@@ -302,44 +308,6 @@ IS
 	error_email_msg		VARCHAR(4000) := '';
 	error_email_to		VARCHAR(1000) := '';
 BEGIN
-
-	/* OPEN CONNECTION */
-        conn:= utl_smtp.open_connection( EmailServer, 25 );
-
-	/* HAND SHAKE */
-        utl_smtp.helo( conn, EmailServer );
-
-        /* CONFIGURE SENDER */
-        utl_smtp.mail( conn, SENT_BY );
-
-	/* CONFIGURE RECIPIENT: TO-list */
-	R_ARRAY := parseRecipients( to_list, '', ''); 
-        indx := R_ARRAY.FIRST;
-        LOOP
-                EXIT WHEN indx IS NULL;
-                IF R_ARRAY(indx) IS NOT NULL
-                THEN
-		        utl_smtp.rcpt( conn, R_ARRAY(indx) );
-			TO_HDR := TO_HDR || R_ARRAY(indx) ||'; ';
-                END IF;
-
-                indx := R_ARRAY.NEXT(indx);
-        END LOOP;
- 
-	/* CONFIGURE RECIPIENT: CC-list (may be empty) */
-	R_ARRAY := parseRecipients( cc_list, '', ''); 
-        indx := R_ARRAY.FIRST;
-        LOOP
-                EXIT WHEN indx IS NULL;
-                IF R_ARRAY(indx) IS NOT NULL
-                THEN
-		        -- utl_smtp.rcpt( conn, 'cc:'|| R_ARRAY(indx) );
-				utl_smtp.rcpt( conn, R_ARRAY(indx) );
-			CC_HDR := CC_HDR || R_ARRAY(indx) ||'; ';
-                END IF;
-
-                indx := R_ARRAY.NEXT(indx);
-        END LOOP;
 
 	select lower( instance_name ) into this_instance from  v$instance;
 			
@@ -374,6 +342,22 @@ BEGIN
 	) t  group by t.param_cd ;
 	if ( SENT_FROM = '' ) then  param_err := 'Y';  end if;	
 	
+	select max( param_value ) keep ( dense_rank  first  order by param_id  desc ) into SMTP_SERVER  from (
+		select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = group_id  and  PARAM_CD = 'SMTP_SERVER'
+		union 
+		select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = 10 and  PARAM_CD = 'SMTP_SERVER' 
+	) t  group by t.param_cd ;
+	if ( SMTP_SERVER = '' ) then  param_err := 'Y';  end if;	
+	
+	select max( to_number( param_value ) ) keep ( dense_rank  first  order by param_id  desc ) into SMTP_PORT  from (
+		select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = group_id  and  PARAM_CD = 'SMTP_PORT'
+		union 
+		select  param_value, param_id, param_cd  from uis_utils.UIS_SYS_PARAM_LKP  where param_id = 10 and  PARAM_CD = 'SMTP_PORT' 
+	) t  group by t.param_cd ;
+	if ( SMTP_PORT = '' ) then  param_err := 'Y';  end if;
+	
+	-- If the caller passed in an account they wish to send this email as, override what we currently have now.
+	--
 	if ( sent_by != '' or sent_by is not NULL )
 	then
 		SENT_FROM := SENT_BY;
@@ -384,6 +368,52 @@ BEGIN
 	 
 	-- </font> was print out the partial end tag so I just removed it.
 	HTML_BODY := HTML_HEAD || body_of_msg || HTML_TAIL ;
+
+
+    -- CONFIGURE SENDING MESSAGE
+    -- You need to put 'MIME-Verion: 1.0' (this is case-sensitive!)
+    -- Content-Type-Encoding is actually Content-Transfer-Encoding.
+    -- The MIME-Version, Content-Type, Content-Transfer-Encoding should
+    -- be the first 3 data items in your message
+	--
+	
+	/* OPEN CONNECTION */
+	conn:= utl_smtp.open_connection( SMTP_SERVER, SMTP_PORT );
+
+	/* HAND SHAKE */
+    utl_smtp.helo( conn, SMTP_SERVER );
+
+	/* CONFIGURE SENDER */
+    utl_smtp.mail( conn, SENT_FROM );		-- was using utl_smtp.mail( conn, SENT_BY ); ...but some serves require a value
+
+	/* CONFIGURE RECIPIENT: TO-list */
+	R_ARRAY := parseRecipients( to_list, '', ''); 
+    indx := R_ARRAY.FIRST;
+    loop
+        EXIT WHEN indx IS NULL;
+        if R_ARRAY(indx) IS NOT NULL
+        then
+			utl_smtp.rcpt( conn, R_ARRAY(indx) );
+			TO_HDR := TO_HDR || R_ARRAY(indx) ||'; ';
+        end if;
+
+        indx := R_ARRAY.NEXT(indx);
+    end loop;
+ 
+	/* CONFIGURE RECIPIENT: CC-list (may be empty) */
+	R_ARRAY := parseRecipients( cc_list, '', ''); 
+    indx := R_ARRAY.FIRST;
+    loop
+		EXIT WHEN indx IS NULL;
+        if R_ARRAY(indx) IS NOT NULL
+        then
+			utl_smtp.rcpt( conn, R_ARRAY(indx) );
+			CC_HDR := CC_HDR || R_ARRAY(indx) ||'; ';
+		end if;
+
+        indx := R_ARRAY.NEXT(indx);
+    end loop;
+
 	
 	-- ENCODE using base64 (ratio 3:4 (3bytes in/ 4bytes out)) - so use a chunk size that returns 2k.
 	--
@@ -415,13 +445,7 @@ BEGIN
          'From:'|| SENT_FROM ||CRLF||
          'Subject: ' || this_subject ||CRLF|| TO_HDR ||CRLF|| CC_HDR ||CRLF||
          '' || crlf || MSG_ENCODED ||'';
-
-        -- CONFIGURE SENDING MESSAGE
-        -- You need to put 'MIME-Verion: 1.0' (this is case-sensitive!)
-        -- Content-Type-Encoding is actually Content-Transfer-Encoding.
-        -- The MIME-Version, Content-Type, Content-Transfer-Encoding should
-        -- be the first 3 data items in your message
-	--
+		 
 	utl_smtp.open_data( conn );
 	utl_smtp.write_data(conn,
 		'MIME-Version: 1.0' ||CHR(13)|| CHR(10)||
@@ -447,7 +471,6 @@ BEGIN
 	if ( param_err = 'Y' )
     then
 
-		
 		select max( param_value ) keep ( dense_rank  first  order by param_id  desc ) into error_email_msg  from (
 			select  param_value, param_id, param_cd  from uis_utils.uis_SYS_PARAM_LKP  where param_id = group_id  and  PARAM_CD = 'ERROR_EMAIL_MSG'
 			union 
