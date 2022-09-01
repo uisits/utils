@@ -201,22 +201,34 @@ as
 		msg_subj_fnd		varchar2( 10 );				
 		i_name				varchar2( 50 );
 	begin
+		select instance_name into i_name  from v$INSTANCE;
 
 		-- Remove entries no longer present in dictionary...
 		--
-		delete from ALL_VALID_PRIVS  where ( owner, table_name, grantee ) NOT IN (
+		delete from uis_utils.ALL_VALID_PRIVS  where ( owner, table_name, grantee ) NOT IN (
 		   select owner, table_name, grantee  from cur_ALL_VALID_PRIVS
 		);
 		
-		select instance_name into i_name  from v$INSTANCE;
+		-- Add entries/bless privileges that occur when you create a new user - to reduce "noise".
+		--
+		insert into uis_utils.ALL_VALID_PRIVS( 
+			 owner, table_name, grantee, grantor, privilege, obj_type, grant_type, grantable, common, inherited
+		)
+		select owner, table_name, grantee, grantor, privilege, obj_type, grant_type, grantable, common, inherited
+		from  uis_utils.cur_ALL_VALID_PRIVS  where ( owner, table_name, grantee ) NOT IN (
+		   select owner, table_name, grantee  from uis_utils.ALL_VALID_PRIVS
+		)
+		and privilege = 'INHERIT PRIVILEGES' and owner = 'SYS' and grantor = table_name ;		
+		
+		-- execute immediate commit;
 		
 		-- Define set of new objects with privileges granted on them
 		--		
 		declare
 			cursor diff_cur  is
-		      select owner, table_name, grantee, grantor, privilege  from cur_ALL_VALID_PRIVS 
+		      select owner, table_name, grantee, grantor, privilege  from  uis_utils.cur_ALL_VALID_PRIVS 
 			  where ( owner, table_name, grantee ) NOT IN (
-				select owner, table_name, grantee  from ALL_VALID_PRIVS
+				select owner, table_name, grantee  from  uis_utils.ALL_VALID_PRIVS
 			);
 			a_rec	diff_cur%rowtype;
 		begin
