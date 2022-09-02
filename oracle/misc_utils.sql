@@ -345,26 +345,32 @@ grant execute on uis_utils.REPLACE_ABBRV  to public;
 
 Input:
 
-	keep_acronym_flag - see prologue to [uis_utils.REPLACE_ABBRC()]
+	keep_acronym_flag - see prologue to [uis_utils.REPLACE_ABBRV()]
 
-	initcap_flag - see prologue to [uis_utils.REPLACE_ABBRC()]
+	initcap_flag - see prologue to [uis_utils.REPLACE_ABBRV()]
 
 	use_acronym_set : for Banner Titles (default: 'BANNER') 
 	...or for Campus Announcements ('ANNOUNCEMENTS')
 	...or for Course Evaluations ('CRSEVALS')
 	...guides which replacement set is used.
 	
-	title_xlat_flag : Y is for phras being acted on is a Banner title needing translated, so other flags 
+	title_xlat_flag : Y is for phrases being acted on is a Banner title needing translated, so other flags 
 		are set accordingly (eliminiating the need to set them just so).
 	
 Note;	MAX string size passed in should be 4000, or less;
 		Hyphens are not considered a separator (some acronyms use hyphens);
 		New lines and charriage returns are not handled (yet);
 		
-		Title and Departments with the name spelled out and the acronym will result in double naming.
-		...Banner change to address the issue?  ...or try to handle in this utility.
+		Title and Departments with the name spelled out along with the acronym will result in double naming.
+		...for Departments/orgs, switch to using Banners CodeBook - which has the official name of an orginization.
+
+		...Solution: change Banner to remove redundancy?  ...or try to handle in this utility (error prone)(?).
 		...e.g.: this should work:
-		select 'Office of Engaged Learning Office of Engaged Learning' str_in, regexp_replace('Office of Engaged Learning Office of Engaged Learning', '(.*)(.*)\1', '\1\2') str_out  from  dual;
+		
+		select 'Office of Engaged Learning Office of Engaged Learning'  str_in
+			, regexp_replace('Office of Engaged Learning Office of Engaged Learning', '(.*)(.*)\1', '\1\2')  str_out
+		from  dual;
+		
 */
 --
 create or replace function  uis_utils.SMARTCAP( 
