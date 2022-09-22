@@ -6,15 +6,15 @@ File:	utils\sqlserver\split_string_word.sql
 USE [uis_utils] ;
 
 
-ALTER FUNCTION [dbo].[split_string_word] (
+alter function [dbo].[split_string_word] (
    @split_this			nvarchar( max ) = 'HELP'	-- to get prologue
    , @word_delimiter	nvarchar( 100 ) = 'PUNT'
    , @include_delimiter	nvarchar( 1 )	= 'N'		-- Should delimiter be included in result 
    , @return_first_part	nvarchar( 1 )	= 'Y'		-- Return substring before (Y) or after (N) the delimiter
 )
-RETURNS NVARCHAR( max )
-AS
-BEGIN
+returns varchar( MAX )
+as
+begin
    
    declare	@sub_this	nvarchar( max );
    
