@@ -9,9 +9,9 @@ Desc:	Utility that finds references across DBs on the server.
 		recreated as needed (to refresh the data set).		
 
 Note: 	Not all DBs have SYSOBJECTS, but the typical ones we are interested do.
-		...[xds] does not - so skip it
-		...but if a DB is needing to be checked - look forthis objects existence
-		and bring it in accordingly (with a false table with NULL [xtype])
+		...[xds] does not - so skip it.
+		...but a defensive check is in place to handle the absence of [SYSOBJECTS]. 
+		...by selecting for a NULL [xtype].
 
 Usage:
 	[dbo].[sp_refreshReferences] ;  -- refresh the dependency references.
@@ -43,7 +43,8 @@ BEGIN
 DECLARE 
    @database_id			int
    , @database_name		sysname
-   , @sql				varchar(max);
+   , @sql				varchar( max )
+   , @sys_obj_stmt		varchar( max );
    
    -- Refresh referenced data or create it in the first place.
    drop table if exists  dbo.UIS_ALL_DATABASES ;
@@ -70,6 +71,13 @@ DECLARE
    while ( select count(*) from  dbo.UIS_ALL_DATABASES ) > 0 begin
       select TOP 1 @database_id = database_id,  @database_name = database_name  from  dbo.UIS_ALL_DATABASES;
 	  
+	  -- Not all DBs have [SYSOBJECTS] - e.g. XDS does not
+	  --
+	  if ( object_ID( quotename( @database_name ) + '.sys.SYSOBJECTS', N'V' ) is not NULL  )     
+	     set @sys_obj_stmt = 'LEFT JOIN '  + quotename( @database_name )  + '.sys.SYSOBJECTS  S  on d.referencing_id = s.id ' ;
+	  else 
+	  	 set @sys_obj_stmt = 'LEFT JOIN  ( select NULL as xtype  )  S  on 1 = 1 ' ;
+	  
       set @sql = 'INSERT into dbo.UIS_ALL_DEPENDENCIES( '
 	  + '  referencing_db, referencing_schema, referencing_obj_name, referencing_obj_type, referenced_server'
 	  + ', referenced_db, referenced_schema, referenced_obj_name '
@@ -81,8 +89,8 @@ DECLARE
 	  + ', d.referenced_server_name  referenced_server'
 	  + ', ISNULL( d.referenced_database_name, DB_NAME('  + convert( varchar,@database_id )  + '))  referenced_db '
 	  + ', d.referenced_schema_name  referenced_schema, d.referenced_entity_name  referenced_obj_name '
-	  + 'FROM '   + quotename( @database_name )  + '.sys.sql_expression_dependencies  D  '
-	  + 'LEFT JOIN '  + quotename( @database_name )  + '.sys.SYSOBJECTS  S  on d.referencing_id = s.id ';
+	  + 'FROM '   + quotename( @database_name )  + '.sys.sql_expression_dependencies  D  ' 
+	  + @sys_obj_stmt ;
 
       exec( @sql );
 
