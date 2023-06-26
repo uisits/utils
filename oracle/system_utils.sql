@@ -19,8 +19,8 @@ Enhancements:
 
 -- ==========================  JOBs =====================================================
 
--- Run job:		exec DBMS_SCHEDULER.run_job('uis_utils.UTILS_RPT_VERIFY_PERMS');
--- Drop job:	exec DBMS_SCHEDULER.drop_job('uis_utils.UTILS_RPT_VERIFY_PERMS');
+-- Run job:		exec DBMS_SCHEDULER.run_job('uis_utils.UTILS_STORAGE_METRICS');
+-- Drop job:	exec DBMS_SCHEDULER.drop_job('uis_utils.UTILS_STORAGE_METRICS');
 --
 -- RUN ON:  oraprod, oratest, oradept, oracle (student)
 --
