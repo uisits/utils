@@ -131,6 +131,7 @@ as
 		msg_body			CLOB;
 		msg_subj			varchar2( 100 );
 		msg_subj_fnd		varchar2( 10 );
+		msg_subj_notfnd		varchar2( 10 );
 		i_name				varchar2( 50 );
 	begin
 		
@@ -164,7 +165,8 @@ as
 		if ( pwd_rows is NULL )
 		then
 		   msg_body := '<p><br/>The are no DB accounts with passwords set for expiring on [ <b>'|| i_name ||'</b> ].</p>';
-		   msg_subj_fnd := 'None';
+		   msg_subj_fnd := '';
+		   msg_subj_notfnd := 'No';
 		else
 		   msg_body := '<p>The following is an order list of users by password expiring time for the DB instance [ <b>'
 		   || i_name ||'</b> ].</p>'
@@ -173,10 +175,11 @@ as
 		   ||'<tr><th>User</th><th>Expiration Date</th><th>Days Remaining</th></tr>'
 		   || pwd_rows 
 		   ||'</table><p>Once the number of users grows to be "unmanageable", then consider a lookup table to derive the owner''s email address.</p>';
-		   msg_subj_fnd := 'Exists';		   
+		   msg_subj_fnd := 'Exists';
+		   msg_subj_notfnd := '';		   
 		end if;
 		
-		msg_subj := 'Alert - Password Expiration(s) '|| msg_subj_fnd ||' ('|| i_name ||' on '|| to_char( sysdate, 'MM/DD/YYYY' ) ||')';
+		msg_subj := 'Alert - '|| msg_subj_notfnd ||' Password Expiration(s) '|| msg_subj_fnd ||' ('|| i_name ||' on '|| to_char( sysdate, 'MM/DD/YYYY' ) ||')';
 		
 		uis_utils.uis_sendmail.send_html( to_list => 'vhube3@uis.edu', subject => msg_subj, body_of_msg => msg_body, group_id => 1001 );
 
