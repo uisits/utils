@@ -153,6 +153,9 @@ values( 'GIS', 'Geographical Information System', 'Acronym for a system framewor
 insert into dbo.wdict_acronym ( acronym, short_name, acronym_desc, is_active ) values( 'iSPI', 'Innovate Springfield ', 'Acronym for the Innovate Springfield  initiative', 'Y');
 
 
+-- ...added 8/31/2023 after showing up in Campus Announcements
+insert into dbo.wdict_acronym ( acronym, short_name, acronym_desc, is_active ) values( 'RAD', 'Rape Agression Defense System', 'Acronym for Women defense organization and courses.', 'Y');
+
 
 delete from dbo.wdict_general where word = 'asb';
 --
