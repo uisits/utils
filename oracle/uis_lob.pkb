@@ -45,7 +45,7 @@ Note:	If you have permission issues running this procedure:
 		
 	    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-Author:	Vern Huber - June 5, 1963
+Author:	Vern Huber - June 5, 1963 
 
 Enhancements:
 		___ ???;
