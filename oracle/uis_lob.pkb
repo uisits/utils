@@ -17,8 +17,9 @@ Note:	If you have permission issues running this procedure:
 		grant execute on  uis_utils.uis_lob to public;
 		
 		To use [write_clob2file], the following needs to be done:
-		--
-		create or replace directory TMP_DIR as '/home/oracle/tmp';	
+		--		
+		create or replace directory TMP_DIR as '/home/oracle/FILEGEN/FILES';
+		...formerly: directory_path = '/home/oracle/tmp' ...on uisgplprod1		
 		...Oracle uses upper internally, and this dir must exist on DB server
 		
 		grant read, write on directory TMP_DIR to  public -- uis_utils;
@@ -30,6 +31,12 @@ Note:	If you have permission issues running this procedure:
 
 		SELECT name   FROM V$PARAMETER  WHERE upper( NAME ) = 'UTL_FILE_DIR';
 		SELECT * FROM all_tab_privs WHERE grantee = 'PUBLIC' AND table_name = 'UTL_FILE';
+		
+		--
+		desc all_directories ;  -- accessible to user;
+
+		select owner ||'.'||directory_name ||' ['|| directory_path ||']'  from dba_directories 
+		where directory_name = 'TMP_DIR';  
 		
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		
@@ -150,9 +157,11 @@ as
    -- chunk_2_wrt	CLOB;
    chunk_2_wrt	varchar2( 4000 char );
    f_handle		UTL_FILE.FILE_TYPE;
-   
+
 begin
    f_handle := UTL_FILE.FOPEN('TMP_DIR', fname, 'w');
+   -- f_handle := UTL_FILE.FOPEN('/home/oracle/FILEGEN/files/' || fname, 'w');
+
    clob_len := dbms_lob.getlength( clob_2_wrt );
 
    loop
