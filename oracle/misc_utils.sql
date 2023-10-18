@@ -312,13 +312,23 @@ BEGIN
 	  
 	  if ( str_acted_on is NULL  and  initcap_flag = 'Y' )  -- ...still nothing has been found, initcap() it.
 	  then
-	     -- initcap() will cap the 'S' on possesive (within single quotes) or within parens
-	     str_acted_on := replace( initcap( str_to_acton ), '''S', '''s' );
-		 str_acted_on := replace( initcap( str_acted_on ), '(S)', '(s)' );
+	     -- initcap() will cap the 'S' on possesive (single quote) or within parens
+         if ( lower( str_to_acton )  like '%''s' ) 
+         then
+            str_acted_on := replace( initcap( str_to_acton ), '''S', '''s' ) ;
+         elsif ( lower( str_to_acton )  like '%(s)' ) 
+         then 
+            str_acted_on := replace( initcap( str_to_acton ), '(S)', '(s)' ) ;
+         elsif ( lower( str_to_acton )  like '%(ls)' ) 
+         then 
+            str_acted_on := replace( initcap( str_to_acton ), '(Ls)', '(LS)' ) ;
+         else 
+            str_acted_on := initcap( str_to_acton ) ;
+         end if;
 	  end if;
 	  
 	  -- ...if its still null, then INITCAP not requested - pass back what was passed in.
-	  if ( str_acted_on is NULL )  -- ...still nothing has been found, initcap() it.
+	  if ( str_acted_on is NULL )
 	  then
 	     str_acted_on :=  str_to_acton ;
 	  end if;
