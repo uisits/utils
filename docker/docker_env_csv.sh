@@ -9,22 +9,32 @@
 # eg call: ./docker_en v_parse.sh  uisdocker1-adviseu-test
 #         ...or pass NO argument - to process all the env files.
 #
-# Note:	Originally test uder [~/WORKON/docker_miner] - [env] files pulled locally, vs using at EDIR.
+# Note:		Originally test uder [~/WORKON/docker_miner] - [env] files pulled locally, vs using at EDIR.
 #
 # Note2: 	[csv] must exist in the directory this cmd is invoked from.
 #
+# Note3:	[env] files are on [UISdocker3] per TL 11/15/2023 (originally were on UISdocker1)
+#
 
+DDIR="$USERNAME/data/docker"
 ##To start the containers based on the text file
 EDIR="/docker/env_files"
 DFILE_BASE="$DDIR/"
-PDIR="./csv"
+PDIR="$DDIR/csv"
 PFILE_BASE="$PDIR/"
+
+# Check to see if the output directory exist - exit if it does not.
+if [ ! -d $PDIR ]
+then
+	echo "Directory [$PDIR] for generating output to does not exist" 
+	exit 1 
+fi
 
 ##Check the number of arguments OR command usage
 if [ $# -gt 1 ]; then
    # usage
    echo "Too many arguments pased in." 
-   exit 1
+   exit 5
 fi
 if [ $# -lt 1 ]; then
    # Process all the env files that are present...
@@ -91,6 +101,7 @@ do
       echo "${APP_NAME},${REPO_NAME},DB,${DB_HOST},${DB_DATABASE},${DB_USERNAME}"  >> ${CSV_CONTAINER}
    
    done
+   # end of loop across resources (eg, where multiple of same type might be used)
 
    # MAIL: Rarely will there be >1 resource, so ignore multiple case.
    #

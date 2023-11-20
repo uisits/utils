@@ -1,5 +1,5 @@
 /*
-File:	utils\sqlserver\uis_dbfile_stat_refresh.sql
+File:	utils\sqlserver\dbfile_stat_refresh.sql
 
 
 sys.DATABASES:	
