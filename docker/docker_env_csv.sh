@@ -2,23 +2,24 @@
 
 # File:	docker_env_parse.sh - extract resource data from a container's env file.
 #
-# Input:	[env] - {container}.env is parsed for resource usage.
+# Input:	$1 - [container/app] to look for (ie, {container}.env to parse for resource usage).
 #
-# Output:	[csv] - output is written to a {contanter}.csv file
+# Output:	[data/docker/csv/<container>.csv] - where output is written to
 #
 # eg call: ./docker_en v_parse.sh  uisdocker1-adviseu-test
-#         ...or pass NO argument - to process all the env files.
+#         ...or pass NO argument - to process all the container env files.
 #
-# Note:		Originally test uder [~/WORKON/docker_miner] - [env] files pulled locally, vs using at EDIR.
+# Note:		Originally test uder [~/WORKON/docker_miner] - [env] files pulled locally, vs using at ENV_FILES_DIR.
 #
-# Note2: 	[csv] must exist in the directory this cmd is invoked from.
+# Note2: 	[$HOME/data/docker/csv] must exist
 #
 # Note3:	[env] files are on [UISdocker3] per TL 11/15/2023 (originally were on UISdocker1)
 #
 
 DDIR="$USERNAME/data/docker"
-##To start the containers based on the text file
-EDIR="/docker/env_files"
+#
+# Location of Laravel env files to parse - based upon the application containers
+ENV_FILES_DIR="/docker/env_files"
 DFILE_BASE="$DDIR/"
 PDIR="$DDIR/csv"
 PFILE_BASE="$PDIR/"
@@ -39,11 +40,16 @@ fi
 if [ $# -lt 1 ]; then
    # Process all the env files that are present...
    cd $DDIR
-   CONTAINER_LIST="`find $EDIR -type d -maxdepth 1 -print | cut -d'/' -f4 `"
+   CONTAINER_LIST="`find $ENV_FILES_DIR -type d -maxdepth 1 -print | cut -d'/' -f4 `"
    cd -
 else
    # Process only the env file for the container called for...
    CONTAINER_LIST="${1}"
+   if [ ! -d $ENV_FILES_DIR/$CONTAINER_LIST ]
+then
+	echo "Container requested [$CONTAINER_LIST] for generating output to does not exist" 
+	exit 1 
+	fi
 fi
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! BEGIN of FOR-LOOP across containters...
@@ -53,7 +59,7 @@ do
 
    CONTAINER=$(echo  $i)
 
-   TGT_CONTAINER="${EDIR}/${CONTAINER}/prod/.env"
+   TGT_CONTAINER="${ENV_FILES_DIR}/${CONTAINER}/prod/.env"
 
    CSV_CONTAINER="${PFILE_BASE}${CONTAINER}.csv"
 
