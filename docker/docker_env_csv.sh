@@ -20,14 +20,12 @@ DDIR="$USERNAME/data/docker"
 #
 # Location of Laravel env files to parse - based upon the application containers
 ENV_FILES_DIR="/docker/env_files"
-DFILE_BASE="$DDIR/"
-PDIR="$DDIR/csv"
-PFILE_BASE="$PDIR/"
+CSV_CONTAINER="${DDIR}/docker_env_apps.csv"
 
 # Check to see if the output directory exist - exit if it does not.
-if [ ! -d $PDIR ]
+if [ ! -d $DDIR ]
 then
-	echo "Directory [$PDIR] for generating output to does not exist" 
+	echo "Directory [$DDIR] for generating output to does not exist" 
 	exit 1 
 fi
 
@@ -46,12 +44,26 @@ else
    # Process only the env file for the container called for...
    CONTAINER_LIST="${1}"
    if [ ! -d $ENV_FILES_DIR/$CONTAINER_LIST ]
-then
-	echo "Container requested [$CONTAINER_LIST] for generating output to does not exist" 
-	exit 1 
-	fi
+   then
+	  echo "Container requested [$CONTAINER_LIST] for generating output to does not exist" 
+	  exit 1 
+   fi
 fi
 
+
+# CSV header for resource file (was building individually - but then we'd need to aggregate them.
+# 
+# Mapping:  [/docker/env_files/<containter>/.env]
+#
+# ...APP_NAME 		>> appshome.APP_DETAILS.FancyName	>> team.APPLICATION.app_title
+# ...<container>	>> appshome.APP_DETAILS.Name		>> team.APPLICATION.app_acronym
+# ...{ DB, MAIL, ...}									>> team.APP_RESOURCE.res_type
+# ...4th field: eg server								>> team.APP_RESOURCE.res_item
+# ...5th field											>> team.APP_RESOURCE.res_instance
+# ...6th field											>> team.APP_RESOURCE.res_user
+#
+echo "FancyName,Name,Type,Server,Instance,User"  > ${CSV_CONTAINER}
+   
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! BEGIN of FOR-LOOP across containters...
 #
 for i in  $CONTAINER_LIST
@@ -61,8 +73,6 @@ do
 
    TGT_CONTAINER="${ENV_FILES_DIR}/${CONTAINER}/prod/.env"
 
-   CSV_CONTAINER="${PFILE_BASE}${CONTAINER}.csv"
-
    # REPO_NAME=$(echo $CONTAINER  | sed 's/uisdocker1\-//g' | sed 's/\-test//g' )  ...test format
    REPO_NAME=$CONTAINER
 
@@ -71,13 +81,11 @@ do
    # See if the target container exist...
    if [ ! -f $TGT_CONTAINER ]
    then
-      echo "$TGT_CONTAINER ENV does not exist"
-      exit 10
+      echo "$TGT_CONTAINER ENV does not exist"  1>&2
+      # exit 10
+	  continue
    fi
 
-   # CSV header for a new resource file...
-   #
-   echo "APP_NAME,REPO_NAME,TYPE,SERVER,INSTANCE,USER_NAME"  > ${CSV_CONTAINER}
 
    # There can be >1 APP_NAME - eg Parking Permit and Ticket, so rare - ignore
    #
