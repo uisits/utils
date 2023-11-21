@@ -16,7 +16,7 @@
 # Note3:	[env] files are on [UISdocker3] per TL 11/15/2023 (originally were on UISdocker1)
 #
 
-DDIR="$USERNAME/data/docker"
+DDIR="$HOME/data/docker"
 #
 # Location of Laravel env files to parse - based upon the application containers
 ENV_FILES_DIR="/docker/env_files"
@@ -38,7 +38,7 @@ fi
 if [ $# -lt 1 ]; then
    # Process all the env files that are present...
    cd $DDIR
-   CONTAINER_LIST="`find $ENV_FILES_DIR -type d -maxdepth 1 -print | cut -d'/' -f4 `"
+   CONTAINER_LIST="`find $ENV_FILES_DIR -maxdepth 1  -type d  -print | cut -d'/' -f4 `"
    cd -
 else
    # Process only the env file for the container called for...
