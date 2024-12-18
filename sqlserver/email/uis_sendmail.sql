@@ -28,6 +28,14 @@ GO
 SP_CONFIGURE 'show advanced options', 0 
 RECONFIGURE WITH OVERRIDE 
 GO
+
+use MSDB;
+GRANT execute  ON OBJECT::dbo.uis_sendmail TO sandal;
+GRANT execute  ON OBJECT::dbo.sp_send_dbmail TO sandal;
+
+-- Grant EXECUTE permission on sp_send_dbmail
+GRANT EXECUTE ON sp_send_dbmail TO sandal;
+
 */
 -- DROP PROCEDURE [dbo].[uis_sendmail]
 -- GO
@@ -210,7 +218,7 @@ Examples:
 			+ char( 10 ) + char( 10 )
 			+ 'Remember to define [msdb.dbo.UIS_SYS_PARAM_LKP] and populate entries for: EMAIL_FROM,  ERROR_EMAIL_MSG,  ERROR_EMAIL_TO'
 
-		exec dbo.sp_send_dbmail  @recipients=@error_email_to, @subject=@subject_str, @body=@body_str
+		exec dbo.sp_send_dbmail  @profile_name = @profile_name, @recipients=@error_email_to, @subject=@subject_str, @body=@body_str
 	end
 	else	-- object exist...
 	begin 
@@ -264,7 +272,7 @@ Examples:
 				+ char( 10 ) + char( 10 )
 				+ 'Remember to populate entries for: EMAIL_FROM,  ERROR_EMAIL_MSG,  ERROR_EMAIL_TO, HTML_HEAD, HTML_TAIL'
 
-			exec dbo.sp_send_dbmail  @recipients=@error_email_to, @subject=@subject_str, @body=@body_str
+			exec dbo.sp_send_dbmail  @profile_name = @profile_name, @recipients=@error_email_to, @subject=@subject_str, @body=@body_str
 		end
 	end
 
@@ -281,7 +289,7 @@ Examples:
 			+ @@servername + ' (' + convert( varchar, getdate()) + ')' 
 			+ char( 10 ) + char( 10 )
 			+ 'See [ utils\sqlserver\loopback_linked_server.sql ] on how to populate it.'
-		exec dbo.sp_send_dbmail  @recipients=@error_email_to, @subject=@subject_str, @body=@body_str
+		exec dbo.sp_send_dbmail  @profile_name = @profile_name, @recipients=@error_email_to, @subject=@subject_str, @body=@body_str
 	end
 
 	-- See if callers wants the ERROR_EMAIL_TO to be used...

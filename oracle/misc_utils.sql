@@ -107,7 +107,61 @@ END;
 --
 grant execute on uis_utils.semester_to_term  to public;
 
-			
+
+-- GET_CUR_TERM: return the current term_cd
+--
+-- E.g.:   select   uis_utils.get_cur_term()  as term_cd   from dual;
+--
+create or replace FUNCTION  uis_utils.get_cur_term
+   return VARCHAR2  AS term_cd  VARCHAR2( 6 ); 
+begin  
+  select current_term into term_cd from uis_edw.VW_SEMESTER ; 
+
+  return ( term_cd ); 
+end;
+--
+grant execute on uis_utils.get_cur_term  to public;
+
+-- GET_CUR_AY_CD: return the current academic year code
+--
+-- E.g.:   select   uis_utils.get_cur_ay_cd()  as cur_ay_cd   from dual;
+--
+create or replace FUNCTION  uis_utils.get_cur_ay_cd
+   return VARCHAR2  AS ay_cd  VARCHAR2( 4 ); 
+begin  
+  select academic_yr_cd into ay_cd from uis_edw.VW_SEMESTER ; 
+
+  return ( ay_cd ); 
+end;
+--
+grant execute on uis_utils.get_cur_ay_cd  to public;
+
+-- GET_TERM_YR return the year for the term_cd passed in, and if NULL for the Current Term.
+--
+-- E.g.:   select   uis_utils.get_term_yr  as term_yr   from dual;
+--
+create or replace FUNCTION  uis_utils.get_term_yr( term_cd  IN VARCHAR2  default 'RESET' )
+   return VARCHAR2  AS this_yr  VARCHAR2( 4 ); 
+begin  
+  declare this_term_cd 	VARCHAR2( 6 ) ;
+  
+  begin
+     if ( term_cd = 'RESET' ) 
+	 then 
+		select current_term into this_term_cd  from uis_edw.VW_SEMESTER ;
+	 else 
+	    this_term_cd := term_cd ;
+	 end if;
+  
+     this_yr := substr( this_term_cd, 2,4 );
+  end;
+  
+  return ( this_yr ); 
+end;
+--
+grant execute on uis_utils.get_term_yr  to public;
+
+
 -- IS_ONLINE_CRS: pass in a [SCHED_TYPE_CD](3 chars) and get back { true, false } literals
 -- ...retrieved from (commonly): T_Sect_Base.sched_type_cd - and there are over 40 of them;
 --
