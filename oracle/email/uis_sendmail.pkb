@@ -115,7 +115,7 @@ END ;
 /
 
 
-CREATE OR REPLACE PACKAGE BODY uis_utils.uis_sendmail  
+create or replace PACKAGE BODY  uis_utils.uis_sendmail  
 as
 FUNCTION split (in_string VARCHAR2, delimiter VARCHAR2) RETURN t_array 
 IS 
@@ -454,7 +454,8 @@ BEGIN
 	
 	this_subject := this_subject || SUBJECT;
 
-    MSG := 'Date: '||TO_CHAR( SYSDATE, 'dd Mon yy hh24:mi:ss' )||CRLF||
+    -- MSG := 'Date: '||TO_CHAR( SYSDATE, 'dd Mon yy hh24:mi:ss' )||CRLF||
+    MSG := 'Date: '|| to_char( SYSTIMESTAMP AT TIME ZONE 'America/Chicago', 'Dy, DD Mon RRRR HH24:MI:SS TZHTZM', 'NLS_DATE_LANGUAGE=AMERICAN') ||	
          'From:'|| SENT_FROM ||CRLF||
          'Subject: ' || this_subject ||CRLF|| TO_HDR ||CRLF|| CC_HDR ||CRLF||
          '' || crlf || MSG_ENCODED ||'';
@@ -530,7 +531,8 @@ BEGIN
 			msg_idx := msg_idx + chunk_sz ;
 		END LOOP;
 	
-		MSG := 'Date: '||TO_CHAR( SYSDATE, 'dd Mon yy hh24:mi:ss' )||CRLF||
+		-- MSG := 'Date: '|| to_char( SYSDATE, 'dd Mon yy hh24:mi:ss' )||CRLF||  ...started causing a 5hr diff (UTC vs UTC-5/CST).
+		MSG := 'Date: ' || to_char( SYSTIMESTAMP AT TIME ZONE 'America/Chicago', 'Dy, DD Mon RRRR HH24:MI:SS TZHTZM', 'NLS_DATE_LANGUAGE=AMERICAN') ||CRLF||	
          'From:'|| error_email_to ||CRLF||
          'Subject: ' || this_subject ||CRLF|| TO_HDR || CRLF ||
          '' || crlf || MSG_ENCODED ||'';
@@ -567,6 +569,7 @@ BEGIN
 
 END send_html;
 
-
 -- END of PKG uis_utils.uis_sendmail
+
 END ;
+
