@@ -95,6 +95,10 @@ Usage:	For general campus wide emails:
 		
 		...if [test_only] is set to anything other than 'N', the email is sent to a fake SMTP server and does not go out.
 		...currently this is the Docker MailHog server.
+		
+		For Friendly-From name (note double quotes - since there is a special character (comma)):
+		exec uis_utils.uis_sendmail.send_html( sent_by => '"Huber, Vern"<vhube3@uis.edu>', to_list => 'vhube3@uis.edu', subject => 'friendly name', body_of_msg => 'Hello' );
+
 */
 CREATE OR REPLACE PACKAGE uis_utils.uis_sendmail  as
 
@@ -454,18 +458,20 @@ BEGIN
 	
 	this_subject := this_subject || SUBJECT;
 
-    -- MSG := 'Date: '||TO_CHAR( SYSDATE, 'dd Mon yy hh24:mi:ss' )||CRLF||
-    MSG := 'Date: '|| to_char( SYSTIMESTAMP AT TIME ZONE 'America/Chicago', 'Dy, DD Mon RRRR HH24:MI:SS TZHTZM', 'NLS_DATE_LANGUAGE=AMERICAN') ||	
-         'From:'|| SENT_FROM ||CRLF||
-         'Subject: ' || this_subject ||CRLF|| TO_HDR ||CRLF|| CC_HDR ||CRLF||
-         '' || crlf || MSG_ENCODED ||'';
-		 
 	utl_smtp.open_data( conn );
 	utl_smtp.write_data(conn,
-		'MIME-Version: 1.0' ||CHR(13)|| CHR(10)||
-		'Content-type: text/html;' ||CHR(13)|| CHR(10)||
-		'Content-transfer-encoding: base64' || CHR(13)||CHR(10) );
-
+		'MIME-Version: 1.0' ||CRLF||
+		'Content-type: text/html;' ||CRLF||
+		'Content-transfer-encoding: base64' ||CRLF 
+	);
+	utl_smtp.write_data(conn,	
+		'Date: '|| to_char( SYSTIMESTAMP AT TIME ZONE 'America/Chicago', 'Dy, DD Mon RRRR HH24:MI:SS TZHTZM', 'NLS_DATE_LANGUAGE=AMERICAN') ||CRLF||	
+        'From:'|| SENT_FROM  ||CRLF||  'Sender:'|| SENT_FROM ||CRLF||
+        'Subject: ' || this_subject ||CRLF||  TO_HDR  ||CRLF||  CC_HDR ||CRLF 
+	); 
+		 
+	MSG := crlf || MSG_ENCODED ||'';
+		 
 	-- Now append the msg - in chunks of 2k...
 	chunk_sz := 2048;
 	msg_idx	 := 1;
@@ -513,10 +519,10 @@ BEGIN
 		this_subject := '[ '|| this_instance ||' ALERT: uis_utils.UIS_SYS_PARAM_LKP ] parameters missing in DB';
 		
 		HTML_BODY := 'The DB utility [uis_utils.uis_sendmail] has discovered that one or more of the following parameters'
-			||CHR(13)|| CHR(10) ||' { EMAIL_FROM, ERROR_EMAIL_MSG, ERROR_EMAIL_TO, HTML_HEAD, HTML_TAIL } '
-			||CHR(13)|| CHR(10) ||'are/is missing in [uis_utils.uis_SYS_PARAM_LKP] in the DB '	
+			|| CRLF ||' { EMAIL_FROM, ERROR_EMAIL_MSG, ERROR_EMAIL_TO, HTML_HEAD, HTML_TAIL } '
+			|| CRLF ||'are/is missing in [uis_utils.uis_SYS_PARAM_LKP] in the DB '	
 			|| this_instance ||' ('|| sysdate ||')<br/><br/>' 
-			||CHR(13)|| CHR(10) ||'Remember to populate entries for: EMAIL_FROM,  ERROR_EMAIL_MSG,  ERROR_EMAIL_TO, HTML_HEAD, HTML_TAIL';
+			|| CRLF ||'Remember to populate entries for: EMAIL_FROM,  ERROR_EMAIL_MSG,  ERROR_EMAIL_TO, HTML_HEAD, HTML_TAIL';
 
 		-- ENCODE using base64 (ratio 3:4 (3bytes in/ 4bytes out)) - so use a chunk size that returns 2k.
 		--
@@ -532,15 +538,15 @@ BEGIN
 		END LOOP;
 	
 		-- MSG := 'Date: '|| to_char( SYSDATE, 'dd Mon yy hh24:mi:ss' )||CRLF||  ...started causing a 5hr diff (UTC vs UTC-5/CST).
-		MSG := 'Date: ' || to_char( SYSTIMESTAMP AT TIME ZONE 'America/Chicago', 'Dy, DD Mon RRRR HH24:MI:SS TZHTZM', 'NLS_DATE_LANGUAGE=AMERICAN') ||CRLF||	
-         'From:'|| error_email_to ||CRLF||
+		MSG := 'Date: ' || to_char( SYSTIMESTAMP AT TIME ZONE 'America/Chicago', 'Dy, DD Mon RRRR HH24:MI:SS TZHTZM', 'NLS_DATE_LANGUAGE=AMERICAN') ||CRLF||
+         'From:'|| error_email_to  ||CRLF||  'Sender:'|| error_email_to ||CRLF||	
          'Subject: ' || this_subject ||CRLF|| TO_HDR || CRLF ||
          '' || crlf || MSG_ENCODED ||'';
 
         -- CONFIGURE SENDING MESSAGE
 		--
 		utl_smtp.open_data( conn );
-		utl_smtp.write_data(conn,  'MIME-Version: 1.0' ||CHR(13)|| CHR(10)||'Content-type: text/html;' ||CHR(13)|| CHR(10)||'Content-transfer-encoding: base64' || CHR(13)||CHR(10) );
+		utl_smtp.write_data(conn,  'MIME-Version: 1.0' || CRLF ||'Content-type: text/html;' || CRLF ||'Content-transfer-encoding: base64' || CRLF );
 
 		-- Now append the msg - in chunks of 2k...
 		chunk_sz := 2048;

@@ -14,7 +14,7 @@ Utilities:
 		replace_abbrv()
 		smartcap() - iterates across a phrase and calls [replace_abbrv()] on each word.
 		fmt_phone_nbr()
-		
+		hex_to_blob() - large ascii hex character set (eg image) and return a BLOB
 See:	
 	
 Author:	Vern Huber - Feb. 22, 2019  
@@ -23,6 +23,39 @@ Enhancements:
 		TBD
 		
 */
+
+/*
+HEX_TO_BLOB() - accepts ascii hex data that is really long (eg image) and converts it to a BLOB
+...which is returned.
+
+*/
+create or replace function uis_utils.HEX_TO_BLOB( hex_str_in  in CLOB )
+  return BLOB
+is
+  l_raw  			RAW(32767);			-- Intermediate RAW variable (max size)
+  l_blob 			BLOB;				-- BLOB to return
+  l_offset			NUMBER := 1;		-- Tracks where in the blob to put the next chunk or converted raw data
+  l_chunk_size		NUMBER := 32767/2; 	-- Max hex chars per chunk for RAW
+begin
+  -- Initialize the BLOB
+  dbms_lob.CREATETEMPORARY( l_blob, TRUE, dbms_lob.CALL );
+
+  -- Loop through the CLOB in chunks because RAW has a size limit
+  while l_offset <= length( hex_str_in ) loop
+  
+    l_raw := UTL_RAW.CAST_TO_RAW( substr( hex_str_in, l_offset, l_chunk_size ));
+	
+    dbms_lob.APPEND( l_blob, l_raw );
+	
+    l_offset := l_offset + l_chunk_size;
+	
+  end loop;
+
+  return l_blob;
+end;
+
+
+
 -- FMT_PHONE_NBR: accepts a phone number formatted or not, and formats it in:
 -- ...fmt_style = 'classic' (default):	xxx-xxx-xxxx  or xxx-xxxx (a)
 -- ...fmt_style = 'formal':				(xxx) xxx-xxxx  or xxx-xxxx (a)
